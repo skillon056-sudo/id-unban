@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { gameIdSchema } from "@/lib/validation";
 import { checkRate, clientIp } from "@/lib/rate-limit";
 import { getSettings } from "@/lib/settings";
+import { inrToUsd } from "@/lib/utils";
 import type { PublicIdResult } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +47,7 @@ export async function GET(
     unbanEnabled: record.status === "BANNED" && record.unbanEnabled,
     free: record.freeUnban,
     price,
+    priceUsd: inrToUsd(price, settings.usd_rate || "83"),
     currency: settings.currency || "INR",
     unbanLeft: record.unbanLeft,
   };

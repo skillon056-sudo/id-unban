@@ -38,6 +38,7 @@ export const settingsSchema = z.object({
   site_name: z.string().trim().min(1).max(120).optional(),
   unban_price: z.string().regex(/^\d+$/).optional(),
   currency: z.string().trim().min(1).max(8).optional(),
+  usd_rate: z.string().regex(/^\d+(\.\d+)?$/).optional(),
   support_contact: z.string().trim().max(200).optional(),
   maintenance_mode: z.enum(["true", "false"]).optional(),
   default_status: z.enum(ID_STATUSES).optional(),

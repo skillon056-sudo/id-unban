@@ -11,6 +11,13 @@ export function formatMoney(amountMinor: number, currency = "INR"): string {
   return `${symbol}${amountMinor} ${symbol ? "" : currency}`.trim();
 }
 
+// Convert an INR amount to USD for display. `rate` = INR per 1 USD.
+export function inrToUsd(inr: number, rate: string | number): number {
+  const r = typeof rate === "string" ? parseFloat(rate) : rate;
+  if (!r || r <= 0) return inr;
+  return Math.round((inr / r) * 100) / 100;
+}
+
 export function generateOrderId(): string {
   // Sunpay requires order_id to be A-Z0-9 with NO hyphens.
   const ts = Date.now().toString(36);

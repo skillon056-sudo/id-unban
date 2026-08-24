@@ -37,6 +37,7 @@ export default function SettingsPage() {
           site_name: settings.site_name,
           unban_price: settings.unban_price,
           currency: settings.currency,
+          usd_rate: settings.usd_rate,
           support_contact: settings.support_contact,
           maintenance_mode: settings.maintenance_mode,
           default_status: settings.default_status,
@@ -76,10 +77,13 @@ export default function SettingsPage() {
             <Field label="Unban price">
               <input className="input" inputMode="numeric" value={settings.unban_price ?? ""} onChange={(e) => set("unban_price", e.target.value.replace(/\D/g, ""))} />
             </Field>
-            <Field label="Currency">
+            <Field label="Currency (gateway)">
               <input className="input" value={settings.currency ?? ""} onChange={(e) => set("currency", e.target.value.toUpperCase())} />
             </Field>
           </div>
+          <Field label="USD rate (₹ per $1) — used to show prices in $ on the site">
+            <input className="input" inputMode="decimal" value={settings.usd_rate ?? ""} onChange={(e) => set("usd_rate", e.target.value.replace(/[^\d.]/g, ""))} />
+          </Field>
           <Field label="Support contact">
             <input className="input" value={settings.support_contact ?? ""} onChange={(e) => set("support_contact", e.target.value)} />
           </Field>

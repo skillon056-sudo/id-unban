@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getGateway } from "@/services/payment";
 import { settlePayment } from "@/services/payment/settle";
+import { getSettings } from "@/lib/settings";
+import { inrToUsd } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -41,5 +43,8 @@ export async function GET(
     select: { status: true },
   });
 
-  return NextResponse.json({ ...fresh, requestStatus: request?.status ?? "PENDING" });
+  const settings = await getSettings();
+  const amountUsd = fresh ? inrToUsd(fresh.amount, settings.usd_rate || "83") : 0;
+
+  return NextResponse.json({ ...fresh, amountUsd, requestStatus: request?.status ?? "PENDING" });
 }

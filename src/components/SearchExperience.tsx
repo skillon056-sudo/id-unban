@@ -171,7 +171,7 @@ function ResultCard({
           <Row label="Unban Left" value={`${data.unbanLeft} times`} />
         )}
         {data.status === "BANNED" && data.unbanEnabled && (
-          <Row label="Unban fee" value={`₹${data.price}`} />
+          <Row label="Unban fee" value={`$${data.priceUsd}`} />
         )}
         {data.status === "UNBANNED" && (
           <p className="rounded-xl bg-emerald-500/10 p-4 text-emerald-700">

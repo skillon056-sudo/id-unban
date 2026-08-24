@@ -1,12 +1,12 @@
 "use client";
 
 import { StatusBadge } from "./StatusBadge";
-import { formatMoney } from "@/lib/utils";
 
 export interface PaymentInfo {
   orderId: string;
   gameId: string;
   amount: number;
+  amountUsd?: number;
   currency: string;
   status: string;
   transactionId?: string | null;
@@ -14,10 +14,11 @@ export interface PaymentInfo {
 }
 
 export function PaymentSummary({ info }: { info: PaymentInfo }) {
+  const amountLabel = info.amountUsd != null ? `$${info.amountUsd}` : `₹${info.amount}`;
   return (
     <div className="mt-6 grid gap-3 text-left text-sm">
       <Row label="Order ID" value={info.orderId} mono />
-      <Row label="Amount" value={info.amount === 0 ? "FREE" : formatMoney(info.amount, info.currency)} />
+      <Row label="Amount" value={amountLabel} />
       {info.transactionId && <Row label="Transaction ID" value={info.transactionId} mono />}
       <div className="flex items-center justify-between gap-4 border-b border-border/60 pb-3">
         <span className="text-muted">Payment status</span>

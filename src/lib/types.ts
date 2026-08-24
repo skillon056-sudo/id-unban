@@ -20,7 +20,8 @@ export interface PublicIdResult {
   banReason: string | null;
   unbanEnabled: boolean;
   free: boolean; // unban is free — no payment, direct success
-  price: number; // effective unban fee (per-ID, or global fallback)
+  price: number; // effective unban fee in INR (charged by the gateway)
+  priceUsd: number; // same fee converted to USD (shown on the site)
   currency: string;
   unbanLeft: number | null; // "Unban Left: N times" (null = don't show)
 }
