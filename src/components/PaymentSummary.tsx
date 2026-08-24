@@ -15,10 +15,9 @@ export interface PaymentInfo {
 
 export function PaymentSummary({ info }: { info: PaymentInfo }) {
   return (
-    <div className="mt-6 grid gap-3 text-sm">
+    <div className="mt-6 grid gap-3 text-left text-sm">
       <Row label="Order ID" value={info.orderId} mono />
-      <Row label="Free Fire ID" value={info.gameId} mono />
-      <Row label="Amount" value={formatMoney(info.amount, info.currency)} />
+      <Row label="Amount" value={info.amount === 0 ? "FREE" : formatMoney(info.amount, info.currency)} />
       {info.transactionId && <Row label="Transaction ID" value={info.transactionId} mono />}
       <div className="flex items-center justify-between gap-4 border-b border-border/60 pb-3">
         <span className="text-muted">Payment status</span>

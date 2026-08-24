@@ -27,7 +27,7 @@ export async function GET(
 
   const record = await prisma.freeFireId.findUnique({
     where: { gameId: parsed.data },
-    select: { gameId: true, status: true, banReason: true, unbanEnabled: true, price: true, unbanLeft: true },
+    select: { gameId: true, status: true, banReason: true, unbanEnabled: true, freeUnban: true, price: true, unbanLeft: true },
   });
 
   if (!record) {
@@ -44,6 +44,7 @@ export async function GET(
     // Only surface a ban reason for banned accounts.
     banReason: record.status === "BANNED" ? record.banReason : null,
     unbanEnabled: record.status === "BANNED" && record.unbanEnabled,
+    free: record.freeUnban,
     price,
     currency: settings.currency || "INR",
     unbanLeft: record.unbanLeft,

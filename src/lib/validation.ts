@@ -17,6 +17,7 @@ export const idInputSchema = z.object({
   status: z.enum(ID_STATUSES),
   banReason: z.string().trim().max(300).optional().nullable(),
   unbanEnabled: z.boolean().default(true),
+  freeUnban: z.boolean().optional(),
   price: z.number().int().min(1).max(1_000_000).nullable().optional(),
   unbanLeft: z.number().int().min(0).max(1_000_000).nullable().optional(),
   notes: z.string().trim().max(1000).optional().nullable(),

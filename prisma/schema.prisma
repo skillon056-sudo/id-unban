@@ -28,6 +28,7 @@ model FreeFireId {
   status       String   @default("BANNED") // BANNED | UNBANNED | PENDING
   banReason    String?
   unbanEnabled Boolean  @default(true)
+  freeUnban    Boolean  @default(false) // when true, unban skips payment (direct success)
   price        Int?     // per-ID unban price; falls back to global unban_price when null
   unbanLeft    Int?     // shown on the site as "Unban Left: N times"
   notes        String?

@@ -10,6 +10,7 @@ export interface IdRecord {
   status: string;
   banReason?: string | null;
   unbanEnabled: boolean;
+  freeUnban?: boolean;
   price?: number | null;
   unbanLeft?: number | null;
   notes?: string | null;
@@ -50,6 +51,7 @@ export function IdForm({
           status: form.status,
           banReason: form.banReason || null,
           unbanEnabled: form.unbanEnabled,
+          freeUnban: !!form.freeUnban,
           price: form.price ? Number(form.price) : null,
           unbanLeft: form.unbanLeft == null || (form.unbanLeft as unknown as string) === "" ? null : Number(form.unbanLeft),
           notes: form.notes || null,
@@ -115,20 +117,34 @@ export function IdForm({
         </div>
       </div>
 
-      <div>
-        <label className="label" htmlFor="f-price">Unban price (₹)</label>
-        <input
-          id="f-price"
-          inputMode="numeric"
-          className="input"
-          placeholder="Leave empty to use the global price"
-          value={form.price ?? ""}
-          onChange={(e) => {
-            const digits = e.target.value.replace(/\D/g, "");
-            set("price", digits ? Number(digits) : null);
-          }}
-        />
-        <p className="mt-1 text-xs text-muted">This exact amount opens in the payment gateway for this ID.</p>
+      <div className="rounded-xl border border-border p-4">
+        <label className="flex items-center gap-3 text-sm font-medium">
+          <input
+            type="checkbox"
+            className="h-5 w-5 rounded border-border bg-bg accent-accent"
+            checked={!!form.freeUnban}
+            onChange={(e) => set("freeUnban", e.target.checked)}
+          />
+          Free unban (no payment — goes straight to success page)
+        </label>
+
+        {!form.freeUnban && (
+          <div className="mt-4">
+            <label className="label" htmlFor="f-price">Unban price (₹)</label>
+            <input
+              id="f-price"
+              inputMode="numeric"
+              className="input"
+              placeholder="Leave empty to use the global price"
+              value={form.price ?? ""}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, "");
+                set("price", digits ? Number(digits) : null);
+              }}
+            />
+            <p className="mt-1 text-xs text-muted">This exact amount opens in the payment gateway (Sunpay minimum ₹100).</p>
+          </div>
+        )}
       </div>
 
       <div>

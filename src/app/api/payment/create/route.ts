@@ -43,6 +43,30 @@ export async function POST(req: Request) {
     );
   }
 
+  const currency = settings.currency || "INR";
+
+  // Free unban: skip the gateway entirely, settle instantly, go to success.
+  if (record.freeUnban) {
+    const orderId = generateOrderId();
+    await prisma.$transaction(async (tx) => {
+      await tx.payment.create({
+        data: { orderId, gameId, amount: 0, currency, status: "SUCCESS", transactionId: "FREE" },
+      });
+      await tx.unbanRequest.create({
+        data: { orderId, gameId, amount: 0, currency, status: "SUBMITTED" },
+      });
+      await tx.freeFireId.updateMany({
+        where: { gameId, status: "BANNED" },
+        data: { status: "PENDING" },
+      });
+    });
+    return NextResponse.json({
+      orderId,
+      free: true,
+      redirectUrl: `/payment/success?orderId=${orderId}`,
+    });
+  }
+
   // Prevent duplicate open orders for the same ID.
   const existing = await prisma.payment.findFirst({
     where: { gameId, status: { in: ["CREATED", "PENDING"] } },
@@ -62,7 +86,6 @@ export async function POST(req: Request) {
 
   // Per-ID price wins; fall back to the global unban_price when not set.
   const amount = record.price && record.price > 0 ? record.price : parseInt(settings.unban_price || "199", 10);
-  const currency = settings.currency || "INR";
   const orderId = generateOrderId();
 
   // Create order + request rows first (state = CREATED), then ask the gateway.

@@ -116,7 +116,7 @@ function ResultCard({
           <Row label="Unban Left" value={`${data.unbanLeft} times`} />
         )}
         {data.status === "BANNED" && data.unbanEnabled && (
-          <Row label="Unban fee" value={`₹${data.price}`} />
+          <Row label="Unban fee" value={data.free ? "FREE" : `₹${data.price}`} />
         )}
         {data.status === "UNBANNED" && (
           <p className="rounded-xl bg-emerald-500/10 p-4 text-emerald-700">
@@ -132,7 +132,7 @@ function ResultCard({
 
       {data.status === "BANNED" && data.unbanEnabled && (
         <button onClick={onUnban} disabled={paying} className="btn-primary mt-6 w-full sm:w-auto">
-          {paying ? <Spinner className="h-5 w-5" /> : `Unban ID · ₹${data.price}`}
+          {paying ? <Spinner className="h-5 w-5" /> : data.free ? "Unban ID · FREE" : `Unban ID · ₹${data.price}`}
         </button>
       )}
       {data.status === "BANNED" && !data.unbanEnabled && (
