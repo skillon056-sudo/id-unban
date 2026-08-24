@@ -8,3 +8,7 @@ prisma/dev.db
 prisma/dev.db-journal
 .DS_Store
 next-env.d.ts
+
+# local server logs
+st.txt
+ste.txt
