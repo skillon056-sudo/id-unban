@@ -28,6 +28,7 @@ model FreeFireId {
   status       String   @default("BANNED") // BANNED | UNBANNED | PENDING
   banReason    String?
   unbanEnabled Boolean  @default(true)
+  price        Int?     // per-ID unban price; falls back to global unban_price when null
   notes        String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

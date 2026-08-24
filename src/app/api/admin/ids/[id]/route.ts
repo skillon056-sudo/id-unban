@@ -42,6 +42,7 @@ export async function PUT(
       status: parsed.data.status ?? undefined,
       banReason: parsed.data.banReason === undefined ? undefined : parsed.data.banReason || null,
       unbanEnabled: parsed.data.unbanEnabled ?? undefined,
+      price: parsed.data.price === undefined ? undefined : parsed.data.price || null,
       notes: parsed.data.notes === undefined ? undefined : parsed.data.notes || null,
     },
   });

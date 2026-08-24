@@ -10,6 +10,7 @@ export interface IdRecord {
   status: string;
   banReason?: string | null;
   unbanEnabled: boolean;
+  price?: number | null;
   notes?: string | null;
 }
 
@@ -48,6 +49,7 @@ export function IdForm({
           status: form.status,
           banReason: form.banReason || null,
           unbanEnabled: form.unbanEnabled,
+          price: form.price ? Number(form.price) : null,
           notes: form.notes || null,
         }),
       });
@@ -109,6 +111,22 @@ export function IdForm({
             Unban available
           </label>
         </div>
+      </div>
+
+      <div>
+        <label className="label" htmlFor="f-price">Unban price (₹)</label>
+        <input
+          id="f-price"
+          inputMode="numeric"
+          className="input"
+          placeholder="Leave empty to use the global price"
+          value={form.price ?? ""}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, "");
+            set("price", digits ? Number(digits) : null);
+          }}
+        />
+        <p className="mt-1 text-xs text-muted">This exact amount opens in the payment gateway for this ID.</p>
       </div>
 
       <div>

@@ -60,6 +60,7 @@ export async function POST(req: Request) {
       status: parsed.data.status,
       banReason: parsed.data.banReason || null,
       unbanEnabled: parsed.data.unbanEnabled,
+      price: parsed.data.price ?? null,
       notes: parsed.data.notes || null,
     },
   });

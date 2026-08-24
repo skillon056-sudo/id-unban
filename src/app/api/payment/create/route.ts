@@ -60,7 +60,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ orderId: existing.orderId, redirectUrl });
   }
 
-  const amount = parseInt(settings.unban_price || "199", 10);
+  // Per-ID price wins; fall back to the global unban_price when not set.
+  const amount = record.price && record.price > 0 ? record.price : parseInt(settings.unban_price || "199", 10);
   const currency = settings.currency || "INR";
   const orderId = generateOrderId();
 

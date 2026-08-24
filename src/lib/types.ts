@@ -19,4 +19,6 @@ export interface PublicIdResult {
   status: IdStatus;
   banReason: string | null;
   unbanEnabled: boolean;
+  price: number; // effective unban fee (per-ID, or global fallback)
+  currency: string;
 }
