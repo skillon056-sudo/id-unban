@@ -21,4 +21,5 @@ export interface PublicIdResult {
   unbanEnabled: boolean;
   price: number; // effective unban fee (per-ID, or global fallback)
   currency: string;
+  unbanLeft: number | null; // "Unban Left: N times" (null = don't show)
 }

@@ -112,6 +112,9 @@ function ResultCard({
         {data.status === "BANNED" && (
           <Row label="Reason" value={data.banReason || "Not specified"} />
         )}
+        {data.unbanLeft != null && (
+          <Row label="Unban Left" value={`${data.unbanLeft} times`} />
+        )}
         {data.status === "BANNED" && data.unbanEnabled && (
           <Row label="Unban fee" value={`₹${data.price}`} />
         )}

@@ -27,7 +27,7 @@ export async function GET(
 
   const record = await prisma.freeFireId.findUnique({
     where: { gameId: parsed.data },
-    select: { gameId: true, status: true, banReason: true, unbanEnabled: true, price: true },
+    select: { gameId: true, status: true, banReason: true, unbanEnabled: true, price: true, unbanLeft: true },
   });
 
   if (!record) {
@@ -46,6 +46,7 @@ export async function GET(
     unbanEnabled: record.status === "BANNED" && record.unbanEnabled,
     price,
     currency: settings.currency || "INR",
+    unbanLeft: record.unbanLeft,
   };
   return NextResponse.json(result);
 }

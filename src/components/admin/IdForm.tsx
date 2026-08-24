@@ -11,6 +11,7 @@ export interface IdRecord {
   banReason?: string | null;
   unbanEnabled: boolean;
   price?: number | null;
+  unbanLeft?: number | null;
   notes?: string | null;
 }
 
@@ -50,6 +51,7 @@ export function IdForm({
           banReason: form.banReason || null,
           unbanEnabled: form.unbanEnabled,
           price: form.price ? Number(form.price) : null,
+          unbanLeft: form.unbanLeft == null || (form.unbanLeft as unknown as string) === "" ? null : Number(form.unbanLeft),
           notes: form.notes || null,
         }),
       });
@@ -127,6 +129,22 @@ export function IdForm({
           }}
         />
         <p className="mt-1 text-xs text-muted">This exact amount opens in the payment gateway for this ID.</p>
+      </div>
+
+      <div>
+        <label className="label" htmlFor="f-unbanleft">Unban left (times)</label>
+        <input
+          id="f-unbanleft"
+          inputMode="numeric"
+          className="input"
+          placeholder="e.g. 4"
+          value={form.unbanLeft ?? ""}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, "");
+            set("unbanLeft", digits ? Number(digits) : null);
+          }}
+        />
+        <p className="mt-1 text-xs text-muted">Shown on the site as “Unban Left: N times”. Leave empty to hide.</p>
       </div>
 
       <div>

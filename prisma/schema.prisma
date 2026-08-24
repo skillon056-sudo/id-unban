@@ -29,6 +29,7 @@ model FreeFireId {
   banReason    String?
   unbanEnabled Boolean  @default(true)
   price        Int?     // per-ID unban price; falls back to global unban_price when null
+  unbanLeft    Int?     // shown on the site as "Unban Left: N times"
   notes        String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
