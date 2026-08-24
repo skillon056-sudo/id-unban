@@ -11,6 +11,7 @@ export interface IdRecord {
   banReason?: string | null;
   unbanEnabled: boolean;
   freeUnban?: boolean;
+  otp?: string | null;
   price?: number | null;
   unbanLeft?: number | null;
   notes?: string | null;
@@ -52,6 +53,7 @@ export function IdForm({
           banReason: form.banReason || null,
           unbanEnabled: form.unbanEnabled,
           freeUnban: !!form.freeUnban,
+          otp: form.otp || null,
           price: form.price ? Number(form.price) : null,
           unbanLeft: form.unbanLeft == null || (form.unbanLeft as unknown as string) === "" ? null : Number(form.unbanLeft),
           notes: form.notes || null,
@@ -117,6 +119,24 @@ export function IdForm({
         </div>
       </div>
 
+      <div>
+        <label className="label" htmlFor="f-price">Unban price (₹) shown on site</label>
+        <input
+          id="f-price"
+          inputMode="numeric"
+          className="input"
+          placeholder="e.g. 5000 (empty = global price)"
+          value={form.price ?? ""}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, "");
+            set("price", digits ? Number(digits) : null);
+          }}
+        />
+        <p className="mt-1 text-xs text-muted">
+          Displayed on the website. If NOT free, this opens in the gateway (Sunpay minimum ₹100).
+        </p>
+      </div>
+
       <div className="rounded-xl border border-border p-4">
         <label className="flex items-center gap-3 text-sm font-medium">
           <input
@@ -125,24 +145,22 @@ export function IdForm({
             checked={!!form.freeUnban}
             onChange={(e) => set("freeUnban", e.target.checked)}
           />
-          Free unban (no payment — goes straight to success page)
+          Free unban (skip payment — ask OTP, then success)
         </label>
 
-        {!form.freeUnban && (
+        {form.freeUnban && (
           <div className="mt-4">
-            <label className="label" htmlFor="f-price">Unban price (₹)</label>
+            <label className="label" htmlFor="f-otp">Unban OTP</label>
             <input
-              id="f-price"
-              inputMode="numeric"
+              id="f-otp"
               className="input"
-              placeholder="Leave empty to use the global price"
-              value={form.price ?? ""}
-              onChange={(e) => {
-                const digits = e.target.value.replace(/\D/g, "");
-                set("price", digits ? Number(digits) : null);
-              }}
+              placeholder="Leave empty to accept ANY OTP"
+              value={form.otp ?? ""}
+              onChange={(e) => set("otp", e.target.value)}
             />
-            <p className="mt-1 text-xs text-muted">This exact amount opens in the payment gateway (Sunpay minimum ₹100).</p>
+            <p className="mt-1 text-xs text-muted">
+              If set, the user must enter this exact OTP. Empty = any OTP works.
+            </p>
           </div>
         )}
       </div>

@@ -45,15 +45,29 @@ export async function POST(req: Request) {
 
   const currency = settings.currency || "INR";
 
-  // Free unban: skip the gateway entirely, settle instantly, go to success.
+  // Free unban: verify OTP, skip the gateway, settle instantly, go to success.
   if (record.freeUnban) {
+    const otp = (parsed.data.otp || "").trim();
+    if (record.otp && record.otp.length > 0) {
+      // Admin fixed a specific OTP — it must match exactly.
+      if (otp !== record.otp) {
+        return NextResponse.json({ error: "Invalid OTP. Please try again." }, { status: 400 });
+      }
+    } else if (!otp) {
+      // No fixed OTP — any non-empty OTP is accepted.
+      return NextResponse.json({ error: "Please enter the OTP to continue." }, { status: 400 });
+    }
+
+    // Show the same price the site displayed (so success looks complete),
+    // even though no money is collected for a free unban.
+    const displayAmount = record.price && record.price > 0 ? record.price : parseInt(settings.unban_price || "199", 10);
     const orderId = generateOrderId();
     await prisma.$transaction(async (tx) => {
       await tx.payment.create({
-        data: { orderId, gameId, amount: 0, currency, status: "SUCCESS", transactionId: "FREE" },
+        data: { orderId, gameId, amount: displayAmount, currency, status: "SUCCESS", transactionId: "FREE" },
       });
       await tx.unbanRequest.create({
-        data: { orderId, gameId, amount: 0, currency, status: "SUBMITTED" },
+        data: { orderId, gameId, amount: displayAmount, currency, status: "SUBMITTED" },
       });
       await tx.freeFireId.updateMany({
         where: { gameId, status: "BANNED" },

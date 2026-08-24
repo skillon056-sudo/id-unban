@@ -18,6 +18,7 @@ export const idInputSchema = z.object({
   banReason: z.string().trim().max(300).optional().nullable(),
   unbanEnabled: z.boolean().default(true),
   freeUnban: z.boolean().optional(),
+  otp: z.string().trim().max(20).optional().nullable(),
   price: z.number().int().min(1).max(1_000_000).nullable().optional(),
   unbanLeft: z.number().int().min(0).max(1_000_000).nullable().optional(),
   notes: z.string().trim().max(1000).optional().nullable(),
@@ -30,6 +31,7 @@ export const idUpdateSchema = idInputSchema.partial().extend({
 
 export const createPaymentSchema = z.object({
   gameId: gameIdSchema,
+  otp: z.string().trim().max(20).optional(),
 });
 
 export const settingsSchema = z.object({

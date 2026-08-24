@@ -61,6 +61,7 @@ export async function POST(req: Request) {
       banReason: parsed.data.banReason || null,
       unbanEnabled: parsed.data.unbanEnabled,
       freeUnban: parsed.data.freeUnban ?? false,
+      otp: parsed.data.otp || null,
       price: parsed.data.price ?? null,
       unbanLeft: parsed.data.unbanLeft ?? null,
       notes: parsed.data.notes || null,

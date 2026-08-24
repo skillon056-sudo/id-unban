@@ -8,6 +8,24 @@ import { Footer } from "@/components/Footer";
 import { Spinner } from "@/components/Spinner";
 import { PaymentSummary, type PaymentInfo } from "@/components/PaymentSummary";
 
+function Countdown({ minutes }: { minutes: number }) {
+  const [left, setLeft] = useState(minutes * 60);
+  useEffect(() => {
+    const t = setInterval(() => setLeft((s) => (s > 0 ? s - 1 : 0)), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const mm = String(Math.floor(left / 60)).padStart(2, "0");
+  const ss = String(left % 60).padStart(2, "0");
+  return (
+    <div className="mx-8 mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+      <p className="text-xs uppercase tracking-widest text-emerald-700">Account will be unbanned within</p>
+      <p className="mt-1 font-display text-4xl font-extrabold tabular-nums text-emerald-700">
+        {mm}:{ss}
+      </p>
+    </div>
+  );
+}
+
 function SuccessInner() {
   const orderId = useSearchParams().get("orderId") || "";
   const [info, setInfo] = useState<PaymentInfo | null>(null);
@@ -25,7 +43,6 @@ function SuccessInner() {
   }, [orderId]);
 
   const verified = info?.status === "SUCCESS";
-  const free = verified && info?.amount === 0;
 
   return (
     <div className="container-x py-16">
@@ -40,9 +57,8 @@ function SuccessInner() {
 
         {info && (
           <div className="card overflow-hidden text-center">
-            {/* Header band */}
             <div
-              className={`px-8 pb-8 pt-10 ${
+              className={`px-8 pb-6 pt-10 ${
                 verified ? "bg-gradient-to-b from-emerald-50 to-transparent" : "bg-gradient-to-b from-amber-50 to-transparent"
               }`}
             >
@@ -54,23 +70,19 @@ function SuccessInner() {
                 {verified ? "✓" : "…"}
               </div>
               <h1 className="mt-5 font-display text-2xl font-extrabold">
-                {free
-                  ? "Unban Request Submitted 🎉"
-                  : verified
-                    ? "Payment Successful 🎉"
-                    : "Payment Processing"}
+                {verified ? "ID Unbanned Successfully" : "Payment Processing"}
               </h1>
               <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
                 {verified
-                  ? free
-                    ? "Your FREE unban request has been submitted successfully and is now queued for review."
-                    : "Your payment has been verified and your unban request has been submitted for review."
+                  ? "Your Free Fire ID has been unbanned successfully. Please wait for the timer to complete before logging in."
                   : "We haven’t confirmed this payment yet. See the pending page for live status."}
               </p>
             </div>
 
+            {verified && <Countdown minutes={30} />}
+
             {/* Highlighted Free Fire ID */}
-            <div className="mx-8 -mt-2 rounded-xl border border-border bg-surface p-4">
+            <div className="mx-8 mt-4 rounded-xl border border-border bg-surface p-4">
               <p className="text-xs uppercase tracking-widest text-muted">Free Fire ID</p>
               <p className="font-display text-2xl font-bold tracking-wide">{info.gameId}</p>
             </div>

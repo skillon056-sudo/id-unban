@@ -16,6 +16,12 @@ export function SearchExperience() {
   const [state, setState] = useState<State>({ phase: "idle" });
   const [paying, setPaying] = useState(false);
 
+  // OTP modal (free unban flow)
+  const [otpOpen, setOtpOpen] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpBusy, setOtpBusy] = useState(false);
+
   async function onSearch(e: React.FormEvent) {
     e.preventDefault();
     const id = gameId.trim();
@@ -37,7 +43,8 @@ export function SearchExperience() {
     }
   }
 
-  async function onUnban(id: string) {
+  // Paid IDs → open the payment gateway.
+  async function startGateway(id: string) {
     setPaying(true);
     try {
       const res = await fetch("/api/payment/create", {
@@ -55,6 +62,42 @@ export function SearchExperience() {
     } catch {
       setState({ phase: "error", message: "Network error starting payment." });
       setPaying(false);
+    }
+  }
+
+  function onUnban(data: PublicIdResult) {
+    if (data.free) {
+      setOtp("");
+      setOtpError(null);
+      setOtpOpen(true);
+    } else {
+      startGateway(data.gameId);
+    }
+  }
+
+  async function submitOtp(id: string) {
+    if (!otp.trim()) {
+      setOtpError("Please enter the OTP.");
+      return;
+    }
+    setOtpBusy(true);
+    setOtpError(null);
+    try {
+      const res = await fetch("/api/payment/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gameId: id, otp: otp.trim() }),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.redirectUrl) {
+        setOtpError(body.error || "Could not verify OTP.");
+        setOtpBusy(false);
+        return;
+      }
+      window.location.href = body.redirectUrl;
+    } catch {
+      setOtpError("Network error. Please try again.");
+      setOtpBusy(false);
     }
   }
 
@@ -82,9 +125,21 @@ export function SearchExperience() {
         )}
 
         {state.phase === "result" && (
-          <ResultCard data={state.data} paying={paying} onUnban={() => onUnban(state.data.gameId)} />
+          <ResultCard data={state.data} paying={paying} onUnban={() => onUnban(state.data)} />
         )}
       </div>
+
+      {otpOpen && state.phase === "result" && (
+        <OtpModal
+          gameId={state.data.gameId}
+          otp={otp}
+          setOtp={setOtp}
+          error={otpError}
+          busy={otpBusy}
+          onClose={() => setOtpOpen(false)}
+          onSubmit={() => submitOtp(state.data.gameId)}
+        />
+      )}
     </div>
   );
 }
@@ -116,7 +171,7 @@ function ResultCard({
           <Row label="Unban Left" value={`${data.unbanLeft} times`} />
         )}
         {data.status === "BANNED" && data.unbanEnabled && (
-          <Row label="Unban fee" value={data.free ? "FREE" : `₹${data.price}`} />
+          <Row label="Unban fee" value={`₹${data.price}`} />
         )}
         {data.status === "UNBANNED" && (
           <p className="rounded-xl bg-emerald-500/10 p-4 text-emerald-700">
@@ -132,7 +187,7 @@ function ResultCard({
 
       {data.status === "BANNED" && data.unbanEnabled && (
         <button onClick={onUnban} disabled={paying} className="btn-primary mt-6 w-full sm:w-auto">
-          {paying ? <Spinner className="h-5 w-5" /> : data.free ? "Unban ID · FREE" : `Unban ID · ₹${data.price}`}
+          {paying ? <Spinner className="h-5 w-5" /> : "Unban ID"}
         </button>
       )}
       {data.status === "BANNED" && !data.unbanEnabled && (
@@ -140,6 +195,66 @@ function ResultCard({
           This ID is not currently eligible for a self-service unban request.
         </p>
       )}
+    </div>
+  );
+}
+
+function OtpModal({
+  gameId,
+  otp,
+  setOtp,
+  error,
+  busy,
+  onClose,
+  onSubmit,
+}: {
+  gameId: string;
+  otp: string;
+  setOtp: (v: string) => void;
+  error: string | null;
+  busy: boolean;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={busy ? undefined : onClose} />
+      <div className="card relative z-10 w-full max-w-sm p-6">
+        <h2 className="font-display text-xl font-bold">Enter OTP</h2>
+        <p className="mt-1 text-sm text-muted">
+          Enter the verification OTP to unban ID <span className="font-semibold text-ink">{gameId}</span>.
+        </p>
+
+        {error && (
+          <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSubmit();
+          }}
+        >
+          <input
+            autoFocus
+            inputMode="numeric"
+            className="input mt-4 text-center text-lg tracking-[0.4em]"
+            placeholder="• • • •"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
+          />
+          <div className="mt-5 flex gap-3">
+            <button type="submit" disabled={busy} className="btn-primary flex-1">
+              {busy ? <Spinner className="h-5 w-5" /> : "Verify & Unban"}
+            </button>
+            <button type="button" onClick={onClose} disabled={busy} className="btn-ghost">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
