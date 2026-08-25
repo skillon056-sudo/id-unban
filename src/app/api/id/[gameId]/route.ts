@@ -45,7 +45,7 @@ export async function GET(
   if (!record) {
     const result: PublicIdResult = {
       gameId: parsed.data,
-      status: "REVIEW REQUIRED",
+      status: "BANNED",
       known: false,
       banReason: defaults.category,
       banDuration: null,

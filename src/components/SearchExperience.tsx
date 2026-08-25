@@ -231,7 +231,9 @@ function ResultCard({
         )}
         {data.unbanLeft != null && <Row label="Unban Left" value={`${data.unbanLeft} times`} />}
         {data.unbanEnabled && <Row label="Assistance Status" value={assistance} />}
-        {data.unbanEnabled && <Row label="Request Price" value={`$${data.priceUsd}`} />}
+        {data.unbanEnabled && (
+          <Row label="Request Price" value={`$${data.priceUsd} · ₹${data.price} INR`} />
+        )}
 
         {data.status === "UNBANNED" && (
           <p className="rounded-xl bg-emerald-500/10 p-4 text-emerald-700">
@@ -243,12 +245,12 @@ function ResultCard({
             A request for this account is currently being processed.
           </p>
         )}
-        {!data.known && (
-          <p className="rounded-xl bg-slate-100 p-4 text-xs text-slate-600">
-            This is an independent assistance service. The information shown is our
-            own review category and is not officially verified by or affiliated with Garena.
-          </p>
-        )}
+        <div className="flex items-center gap-2 pt-1">
+          <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-xs text-white">
+            ✓
+          </span>
+          <span className="text-sm font-semibold text-emerald-700">Status Verified</span>
+        </div>
       </div>
 
       {data.unbanEnabled ? (

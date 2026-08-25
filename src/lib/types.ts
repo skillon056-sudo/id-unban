@@ -16,7 +16,7 @@ export type RequestState = (typeof REQUEST_STATES)[number];
 // Public-facing view of an ID lookup — never leaks notes/internal fields.
 export interface PublicIdResult {
   gameId: string;
-  status: IdStatus | "REVIEW REQUIRED";
+  status: IdStatus;
   known: boolean; // false = no custom admin record; default config was used
   banReason: string | null; // assistance category / ban reason
   banDuration: string | null; // review period / ban duration
