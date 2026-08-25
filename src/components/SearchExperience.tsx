@@ -251,6 +251,11 @@ function ResultCard({
           </span>
           <span className="text-sm font-semibold text-emerald-700">Status Verified</span>
         </div>
+
+        {/* Admin-editable note (Settings → Result note). Empty = hidden. */}
+        {data.note && (
+          <p className="rounded-xl bg-slate-100 p-4 text-xs text-slate-600">{data.note}</p>
+        )}
       </div>
 
       {data.unbanEnabled ? (

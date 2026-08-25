@@ -45,6 +45,7 @@ export default function SettingsPage() {
           unknown_reason: settings.unknown_reason,
           default_unban_left: settings.default_unban_left,
           default_price_usd: settings.default_price_usd,
+          result_note: settings.result_note,
         }),
       });
       const body = await res.json();
@@ -127,6 +128,15 @@ export default function SettingsPage() {
                   <input className="input" inputMode="decimal" value={settings.default_price_usd ?? ""} onChange={(e) => set("default_price_usd", e.target.value.replace(/[^\d.]/g, ""))} />
                 </Field>
               </div>
+              <Field label="Result note (shown under the result — leave empty to hide)">
+                <textarea
+                  rows={3}
+                  className="input"
+                  placeholder="e.g. This is an independent assistance service…"
+                  value={settings.result_note ?? ""}
+                  onChange={(e) => set("result_note", e.target.value)}
+                />
+              </Field>
             </div>
           </div>
 

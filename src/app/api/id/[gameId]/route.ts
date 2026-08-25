@@ -55,6 +55,7 @@ export async function GET(
       priceUsd: defaults.priceUsd,
       currency: defaults.currency,
       unbanLeft: defaults.unbanLeft,
+      note: settings.result_note || "",
     };
     return NextResponse.json(result);
   }
@@ -75,6 +76,7 @@ export async function GET(
     priceUsd: inrToUsd(price, usdRate),
     currency: settings.currency || "INR",
     unbanLeft: record.unbanLeft ?? defaults.unbanLeft,
+    note: settings.result_note || "",
   };
   return NextResponse.json(result);
 }

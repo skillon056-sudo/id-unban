@@ -26,4 +26,5 @@ export interface PublicIdResult {
   priceUsd: number; // same fee converted to USD (shown on the site)
   currency: string;
   unbanLeft: number | null; // "Unban Left: N times" (null = don't show)
+  note: string; // admin-editable note under the result ("" = hide)
 }
