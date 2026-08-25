@@ -16,6 +16,7 @@ export const idInputSchema = z.object({
   gameId: gameIdSchema,
   status: z.enum(ID_STATUSES),
   banReason: z.string().trim().max(300).optional().nullable(),
+  banDuration: z.string().trim().max(100).optional().nullable(),
   unbanEnabled: z.boolean().default(true),
   freeUnban: z.boolean().optional(),
   otp: z.string().trim().max(20).optional().nullable(),
@@ -43,6 +44,8 @@ export const settingsSchema = z.object({
   maintenance_mode: z.enum(["true", "false"]).optional(),
   default_status: z.enum(ID_STATUSES).optional(),
   payment_enabled: z.enum(["true", "false"]).optional(),
+  unknown_assist: z.enum(["true", "false"]).optional(),
+  unknown_reason: z.string().trim().max(120).optional(),
   // Background-image slots — a local /uploads path or a full URL, or "" to clear.
   img_page_bg: z.string().trim().max(500).optional(),
   img_hero_bg: z.string().trim().max(500).optional(),

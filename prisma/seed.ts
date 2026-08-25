@@ -19,13 +19,15 @@ async function main() {
   // ── Settings ─────────────────────────────────────────────────
   const settings: Record<string, string> = {
     site_name: process.env.NEXT_PUBLIC_SITE_NAME || "FF ID Recovery",
-    unban_price: process.env.UNBAN_PRICE || "199",
+    unban_price: process.env.UNBAN_PRICE_INR || process.env.UNBAN_PRICE || "1000",
     currency: process.env.PAYMENT_CURRENCY || "INR",
     usd_rate: "83", // INR per 1 USD — used to show prices in $ on the site
     support_contact: "support@example.com",
     maintenance_mode: "false",
     default_status: "BANNED",
     payment_enabled: "true",
+    unknown_assist: "false", // show a default assistance category for unknown IDs
+    unknown_reason: "USED HACK OR OTHER",
   };
   for (const [key, value] of Object.entries(settings)) {
     await prisma.setting.upsert({

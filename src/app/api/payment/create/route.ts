@@ -33,10 +33,13 @@ export async function POST(req: Request) {
   }
 
   const record = await prisma.freeFireId.findUnique({ where: { gameId } });
-  if (!record) {
+  const globalPrice = parseInt(settings.unban_price || process.env.UNBAN_PRICE_INR || "1000", 10);
+  const assistUnknown = !record && settings.unknown_assist === "true";
+
+  if (!record && !assistUnknown) {
     return NextResponse.json({ error: "ID not found." }, { status: 404 });
   }
-  if (record.status !== "BANNED" || !record.unbanEnabled) {
+  if (record && (record.status !== "BANNED" || !record.unbanEnabled)) {
     return NextResponse.json(
       { error: "This ID is not eligible for an unban request." },
       { status: 409 },
@@ -44,6 +47,16 @@ export async function POST(req: Request) {
   }
 
   const currency = settings.currency || "INR";
+
+  // Unknown ID with assistance mode on → paid gateway flow at the global price.
+  if (assistUnknown) {
+    return createGatewayOrder(gameId, globalPrice, currency);
+  }
+
+  if (!record) {
+    // Unreachable (handled above) — narrows the type for the rest of the flow.
+    return NextResponse.json({ error: "ID not found." }, { status: 404 });
+  }
 
   // Free unban: verify OTP, skip the gateway, settle instantly, go to success.
   if (record.freeUnban) {
@@ -81,14 +94,21 @@ export async function POST(req: Request) {
     });
   }
 
-  // Prevent duplicate open orders for the same ID.
+  // Per-ID price wins; fall back to the global unban_price when not set.
+  const amount = record.price && record.price > 0 ? record.price : globalPrice;
+  return createGatewayOrder(gameId, amount, currency);
+}
+
+// Shared: create the order server-side, then hand off to the gateway.
+// Reuses an open order for the same ID to avoid duplicate charges.
+async function createGatewayOrder(gameId: string, amount: number, currency: string) {
   const existing = await prisma.payment.findFirst({
     where: { gameId, status: { in: ["CREATED", "PENDING"] } },
     orderBy: { createdAt: "desc" },
   });
+  const gateway = getGateway();
+
   if (existing) {
-    const gateway = getGateway();
-    // Re-issue a redirect to the existing pending order rather than a new one.
     const { redirectUrl } = await gateway.createOrder({
       orderId: existing.orderId,
       gameId,
@@ -98,21 +118,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ orderId: existing.orderId, redirectUrl });
   }
 
-  // Per-ID price wins; fall back to the global unban_price when not set.
-  const amount = record.price && record.price > 0 ? record.price : parseInt(settings.unban_price || "199", 10);
   const orderId = generateOrderId();
-
-  // Create order + request rows first (state = CREATED), then ask the gateway.
   await prisma.$transaction([
-    prisma.payment.create({
-      data: { orderId, gameId, amount, currency, status: "CREATED" },
-    }),
-    prisma.unbanRequest.create({
-      data: { orderId, gameId, amount, currency, status: "PENDING" },
-    }),
+    prisma.payment.create({ data: { orderId, gameId, amount, currency, status: "CREATED" } }),
+    prisma.unbanRequest.create({ data: { orderId, gameId, amount, currency, status: "PENDING" } }),
   ]);
 
-  const gateway = getGateway();
   try {
     const { redirectUrl, raw } = await gateway.createOrder({ orderId, gameId, amount, currency });
     await prisma.payment.update({
@@ -120,7 +131,7 @@ export async function POST(req: Request) {
       data: { status: "PENDING", gatewayResponse: raw ? JSON.stringify(raw).slice(0, 4000) : undefined },
     });
     return NextResponse.json({ orderId, redirectUrl });
-  } catch (err) {
+  } catch {
     await prisma.payment.update({ where: { orderId }, data: { status: "FAILED" } });
     return NextResponse.json(
       { error: "Could not start payment. Please try again later." },

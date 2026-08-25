@@ -41,6 +41,7 @@ export async function PUT(
       gameId: parsed.data.gameId ?? undefined,
       status: parsed.data.status ?? undefined,
       banReason: parsed.data.banReason === undefined ? undefined : parsed.data.banReason || null,
+      banDuration: parsed.data.banDuration === undefined ? undefined : parsed.data.banDuration || null,
       unbanEnabled: parsed.data.unbanEnabled ?? undefined,
       freeUnban: parsed.data.freeUnban ?? undefined,
       otp: parsed.data.otp === undefined ? undefined : parsed.data.otp || null,

@@ -9,6 +9,7 @@ export interface IdRecord {
   gameId: string;
   status: string;
   banReason?: string | null;
+  banDuration?: string | null;
   unbanEnabled: boolean;
   freeUnban?: boolean;
   otp?: string | null;
@@ -51,6 +52,7 @@ export function IdForm({
           gameId: form.gameId,
           status: form.status,
           banReason: form.banReason || null,
+          banDuration: form.banDuration || null,
           unbanEnabled: form.unbanEnabled,
           freeUnban: !!form.freeUnban,
           otp: form.otp || null,
@@ -186,9 +188,20 @@ export function IdForm({
         <input
           id="f-reason"
           className="input"
-          placeholder="e.g. Suspicious activity"
+          placeholder="e.g. USED HACK OR OTHER"
           value={form.banReason ?? ""}
           onChange={(e) => set("banReason", e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label className="label" htmlFor="f-duration">Ban duration</label>
+        <input
+          id="f-duration"
+          className="input"
+          placeholder="e.g. Permanent / 30 days"
+          value={form.banDuration ?? ""}
+          onChange={(e) => set("banDuration", e.target.value)}
         />
       </div>
 

@@ -42,6 +42,8 @@ export default function SettingsPage() {
           maintenance_mode: settings.maintenance_mode,
           default_status: settings.default_status,
           payment_enabled: settings.payment_enabled,
+          unknown_assist: settings.unknown_assist,
+          unknown_reason: settings.unknown_reason,
         }),
       });
       const body = await res.json();
@@ -106,6 +108,18 @@ export default function SettingsPage() {
               <option value="true">On</option>
             </select>
           </Field>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Unknown-ID assistance mode">
+              <select className="input" value={settings.unknown_assist ?? "false"} onChange={(e) => set("unknown_assist", e.target.value)}>
+                <option value="false">Off (show “information unavailable”)</option>
+                <option value="true">On (show assistance category + allow request)</option>
+              </select>
+            </Field>
+            <Field label="Assistance category (for unknown IDs)">
+              <input className="input" value={settings.unknown_reason ?? ""} onChange={(e) => set("unknown_reason", e.target.value)} />
+            </Field>
+          </div>
 
           <div className="flex items-center gap-4 pt-2">
             <button type="submit" disabled={busy} className="btn-primary">

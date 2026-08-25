@@ -5,15 +5,27 @@ import { Spinner } from "./Spinner";
 import { StatusBadge } from "./StatusBadge";
 import type { PublicIdResult } from "@/lib/types";
 
+// Honest wording — we check our own stored/available information, not Garena.
+const STEPS = [
+  "Checking available account information",
+  "Reading available information",
+  "Checking account status",
+  "Calculating request details",
+  "Preparing result",
+];
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 type State =
   | { phase: "idle" }
-  | { phase: "loading" }
+  | { phase: "checking" }
   | { phase: "error"; message: string }
   | { phase: "result"; data: PublicIdResult };
 
 export function SearchExperience() {
   const [gameId, setGameId] = useState("");
   const [state, setState] = useState<State>({ phase: "idle" });
+  const [step, setStep] = useState(0);
   const [paying, setPaying] = useState(false);
 
   // OTP modal (free unban flow)
@@ -26,24 +38,28 @@ export function SearchExperience() {
     e.preventDefault();
     const id = gameId.trim();
     if (!/^\d{6,15}$/.test(id)) {
-      setState({ phase: "error", message: "Enter a valid numeric Free Fire ID (6–15 digits)." });
+      setState({ phase: "error", message: "Please enter a valid Free Fire ID." });
       return;
     }
-    setState({ phase: "loading" });
-    try {
-      const res = await fetch(`/api/id/${encodeURIComponent(id)}`);
-      const body = await res.json();
-      if (!res.ok) {
-        setState({ phase: "error", message: body.error || "Something went wrong." });
-        return;
-      }
-      setState({ phase: "result", data: body });
-    } catch {
-      setState({ phase: "error", message: "Network error. Please try again." });
+
+    setStep(0);
+    setState({ phase: "checking" });
+
+    // Kick off the real lookup while the animation plays.
+    const lookup = fetch(`/api/id/${encodeURIComponent(id)}`)
+      .then((r) => r.json().then((b) => ({ ok: r.ok, b })))
+      .catch(() => ({ ok: false, b: { error: "Network error. Please try again." } }));
+
+    for (let i = 0; i < STEPS.length; i++) {
+      setStep(i);
+      await sleep(600); // ~3s total
     }
+
+    const { ok, b } = await lookup;
+    if (!ok) setState({ phase: "error", message: b.error || "Something went wrong." });
+    else setState({ phase: "result", data: b as PublicIdResult });
   }
 
-  // Paid IDs → open the payment gateway.
   async function startGateway(id: string) {
     setPaying(true);
     try {
@@ -114,12 +130,14 @@ export function SearchExperience() {
           value={gameId}
           onChange={(e) => setGameId(e.target.value.replace(/\D/g, ""))}
         />
-        <button type="submit" className="btn-primary" disabled={state.phase === "loading"}>
-          {state.phase === "loading" ? <Spinner className="h-5 w-5" /> : "Check ID Status"}
+        <button type="submit" className="btn-primary" disabled={state.phase === "checking"}>
+          {state.phase === "checking" ? <Spinner className="h-5 w-5" /> : "Check ID Status"}
         </button>
       </form>
 
       <div className="mt-5" aria-live="polite">
+        {state.phase === "checking" && <CheckingSteps step={step} />}
+
         {state.phase === "error" && (
           <div className="card border-red-500/30 p-5 text-red-600">{state.message}</div>
         )}
@@ -144,6 +162,38 @@ export function SearchExperience() {
   );
 }
 
+function CheckingSteps({ step }: { step: number }) {
+  return (
+    <div className="card p-6">
+      <ul className="space-y-3">
+        {STEPS.map((label, i) => {
+          const done = i < step;
+          const active = i === step;
+          return (
+            <li key={label} className="flex items-center gap-3">
+              <span
+                className={`grid h-6 w-6 place-items-center rounded-full text-xs transition ${
+                  done
+                    ? "bg-emerald-500 text-white"
+                    : active
+                      ? "bg-accent text-ink"
+                      : "border border-border text-muted"
+                }`}
+              >
+                {done ? "✓" : active ? <Spinner className="h-3 w-3" /> : i + 1}
+              </span>
+              <span className={done || active ? "font-medium text-ink" : "text-muted"}>
+                {label}
+                {active && "…"}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 function ResultCard({
   data,
   paying,
@@ -153,6 +203,7 @@ function ResultCard({
   paying: boolean;
   onUnban: () => void;
 }) {
+  const assistance = data.unbanEnabled ? "Available" : "Not available";
   return (
     <div className="card animate-fade-up p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -164,15 +215,14 @@ function ResultCard({
       </div>
 
       <div className="mt-5 grid gap-3 text-sm">
+        {data.banReason && <Row label="Reason" value={data.banReason} />}
         {data.status === "BANNED" && (
-          <Row label="Reason" value={data.banReason || "Not specified"} />
+          <Row label="Ban Duration" value={data.banDuration || "Available information"} />
         )}
-        {data.unbanLeft != null && (
-          <Row label="Unban Left" value={`${data.unbanLeft} times`} />
-        )}
-        {data.status === "BANNED" && data.unbanEnabled && (
-          <Row label="Unban fee" value={`$${data.priceUsd}`} />
-        )}
+        {data.unbanLeft != null && <Row label="Unban Left" value={`${data.unbanLeft} times`} />}
+        {data.unbanEnabled && <Row label="Assistance Status" value={assistance} />}
+        {data.unbanEnabled && <Row label="Request Fee" value={`$${data.priceUsd}`} />}
+
         {data.status === "UNBANNED" && (
           <p className="rounded-xl bg-emerald-500/10 p-4 text-emerald-700">
             This account is active and not banned. No action needed.
@@ -180,20 +230,27 @@ function ResultCard({
         )}
         {data.status === "PENDING" && (
           <p className="rounded-xl bg-amber-500/10 p-4 text-amber-700">
-            An unban request for this account is currently being processed.
+            A request for this account is currently being processed.
+          </p>
+        )}
+        {!data.known && (
+          <p className="rounded-xl bg-slate-100 p-4 text-slate-600">
+            Account information is unavailable for this ID. This is an independent
+            assistance service and is not affiliated with Garena.
           </p>
         )}
       </div>
 
-      {data.status === "BANNED" && data.unbanEnabled && (
+      {data.unbanEnabled ? (
         <button onClick={onUnban} disabled={paying} className="btn-primary mt-6 w-full sm:w-auto">
           {paying ? <Spinner className="h-5 w-5" /> : "Unban ID"}
         </button>
-      )}
-      {data.status === "BANNED" && !data.unbanEnabled && (
-        <p className="mt-6 rounded-xl bg-slate-100 p-4 text-slate-600">
-          This ID is not currently eligible for a self-service unban request.
-        </p>
+      ) : (
+        data.status === "BANNED" && (
+          <p className="mt-6 rounded-xl bg-slate-100 p-4 text-slate-600">
+            This ID is not currently eligible for a self-service request.
+          </p>
+        )
       )}
     </div>
   );

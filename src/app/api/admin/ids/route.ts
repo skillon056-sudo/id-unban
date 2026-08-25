@@ -59,6 +59,7 @@ export async function POST(req: Request) {
       gameId: parsed.data.gameId,
       status: parsed.data.status,
       banReason: parsed.data.banReason || null,
+      banDuration: parsed.data.banDuration || null,
       unbanEnabled: parsed.data.unbanEnabled,
       freeUnban: parsed.data.freeUnban ?? false,
       otp: parsed.data.otp || null,

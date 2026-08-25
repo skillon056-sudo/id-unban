@@ -16,8 +16,10 @@ export type RequestState = (typeof REQUEST_STATES)[number];
 // Public-facing view of an ID lookup — never leaks notes/internal fields.
 export interface PublicIdResult {
   gameId: string;
-  status: IdStatus;
+  status: IdStatus | "INFORMATION UNAVAILABLE";
+  known: boolean; // false = ID not in the admin database (assistance mode)
   banReason: string | null;
+  banDuration: string | null;
   unbanEnabled: boolean;
   free: boolean; // unban is free — no payment, direct success
   price: number; // effective unban fee in INR (charged by the gateway)

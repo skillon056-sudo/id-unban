@@ -27,6 +27,7 @@ model FreeFireId {
   gameId       String   @unique
   status       String   @default("BANNED") // BANNED | UNBANNED | PENDING
   banReason    String?
+  banDuration  String?  // e.g. "Permanent", "30 days" — shown on the result card
   unbanEnabled Boolean  @default(true)
   freeUnban    Boolean  @default(false) // when true, unban skips payment (OTP -> direct success)
   otp          String?  // if set, the exact OTP the user must enter; empty = accept any OTP
