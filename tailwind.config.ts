@@ -28,9 +28,16 @@ const config: Config = {
           "0%": { opacity: "0", transform: "translateY(10px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        "slide-through": {
+          "0%": { opacity: "0", transform: "translateX(26px)" },
+          "18%": { opacity: "1", transform: "translateX(0)" },
+          "78%": { opacity: "1", transform: "translateX(0)" },
+          "100%": { opacity: "0", transform: "translateX(-26px)" },
+        },
       },
       animation: {
         "fade-up": "fade-up 0.4s ease-out",
+        "slide-through": "slide-through 800ms ease-in-out both",
       },
     },
   },

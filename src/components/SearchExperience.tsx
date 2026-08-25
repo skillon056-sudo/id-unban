@@ -3,17 +3,8 @@
 import { useState } from "react";
 import { Spinner } from "./Spinner";
 import { StatusBadge } from "./StatusBadge";
+import { CheckingSteps, STEPS } from "./CheckingSteps";
 import type { PublicIdResult } from "@/lib/types";
-
-// Honest wording — we check our own stored/available information, not Garena.
-// ~4s total so each step stays readable without dragging.
-const STEPS: { label: string; ms: number }[] = [
-  { label: "Checking account information", ms: 800 },
-  { label: "Reading available information", ms: 800 },
-  { label: "Checking account status", ms: 900 },
-  { label: "Preparing review details", ms: 800 },
-  { label: "Calculating request details", ms: 700 },
-];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -160,44 +151,6 @@ export function SearchExperience() {
           onSubmit={() => submitOtp(state.data.gameId)}
         />
       )}
-    </div>
-  );
-}
-
-function CheckingSteps({ step }: { step: number }) {
-  return (
-    <div className="card animate-fade-up p-6">
-      <div className="text-center">
-        <p className="font-display text-sm font-bold uppercase tracking-widest text-muted">
-          Checking ID
-        </p>
-        <Spinner className="mx-auto mt-4 h-8 w-8 text-accent" />
-      </div>
-      <ul className="mt-6 space-y-3">
-        {STEPS.map((s, i) => {
-          const done = i < step;
-          const active = i === step;
-          return (
-            <li key={s.label} className="flex items-center gap-3 transition">
-              <span
-                className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs transition ${
-                  done
-                    ? "bg-emerald-500 text-white"
-                    : active
-                      ? "bg-accent text-ink"
-                      : "border border-border text-muted"
-                }`}
-              >
-                {done ? "✓" : active ? <Spinner className="h-3 w-3" /> : "○"}
-              </span>
-              <span className={done || active ? "font-medium text-ink" : "text-muted"}>
-                {s.label}
-                {active && "…"}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
     </div>
   );
 }
