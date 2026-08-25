@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { gameIdSchema } from "@/lib/validation";
 import { checkRate, clientIp } from "@/lib/rate-limit";
 import { getSettings } from "@/lib/settings";
+import { getDefaults } from "@/lib/defaults";
 import { inrToUsd } from "@/lib/utils";
 import type { PublicIdResult } from "@/lib/types";
 
@@ -35,61 +36,45 @@ export async function GET(
   });
 
   const settings = await getSettings();
-  const globalPrice = parseInt(settings.unban_price || process.env.UNBAN_PRICE_INR || "1000", 10);
-  const usdRate = settings.usd_rate || "83";
+  const defaults = await getDefaults();
+  const usdRate = defaults.usdRate;
 
-  // Unknown ID — never fabricate a Garena result. Either show an explicit
-  // "information unavailable" card, or (if the admin enabled it) a clearly
-  // labelled assistance category.
+  // No custom admin record → every valid ID still gets a result, built from
+  // the centralized default configuration. Values are clearly labelled as our
+  // own assistance data, never as officially verified Garena information.
   if (!record) {
-    if (settings.unknown_assist === "true") {
-      const reason = settings.unknown_reason || "USED HACK OR OTHER";
-      const result: PublicIdResult = {
-        gameId: parsed.data,
-        status: "INFORMATION UNAVAILABLE",
-        known: false,
-        banReason: `Assistance category: ${reason}`,
-        banDuration: null,
-        unbanEnabled: true,
-        free: false,
-        price: globalPrice,
-        priceUsd: inrToUsd(globalPrice, usdRate),
-        currency: settings.currency || "INR",
-        unbanLeft: null,
-      };
-      return NextResponse.json(result);
-    }
     const result: PublicIdResult = {
       gameId: parsed.data,
-      status: "INFORMATION UNAVAILABLE",
+      status: "REVIEW REQUIRED",
       known: false,
-      banReason: "Reason information has not been provided for this ID.",
+      banReason: defaults.category,
       banDuration: null,
-      unbanEnabled: false,
+      unbanEnabled: true,
       free: false,
-      price: globalPrice,
-      priceUsd: inrToUsd(globalPrice, usdRate),
-      currency: settings.currency || "INR",
-      unbanLeft: null,
+      price: defaults.priceInr,
+      priceUsd: defaults.priceUsd,
+      currency: defaults.currency,
+      unbanLeft: defaults.unbanLeft,
     };
     return NextResponse.json(result);
   }
 
-  const price = record.price && record.price > 0 ? record.price : globalPrice;
+  // Admin record overrides the defaults.
+  const price = record.price && record.price > 0 ? record.price : defaults.priceInr;
 
   const result: PublicIdResult = {
     gameId: record.gameId,
     status: record.status as PublicIdResult["status"],
     known: true,
     // Only surface a ban reason for banned accounts.
-    banReason: record.status === "BANNED" ? record.banReason : null,
+    banReason: record.status === "BANNED" ? record.banReason || defaults.category : null,
     banDuration: record.status === "BANNED" ? record.banDuration : null,
     unbanEnabled: record.status === "BANNED" && record.unbanEnabled,
     free: record.freeUnban,
     price,
     priceUsd: inrToUsd(price, usdRate),
     currency: settings.currency || "INR",
-    unbanLeft: record.unbanLeft,
+    unbanLeft: record.unbanLeft ?? defaults.unbanLeft,
   };
   return NextResponse.json(result);
 }

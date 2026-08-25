@@ -18,6 +18,12 @@ export function inrToUsd(inr: number, rate: string | number): number {
   return Math.round((inr / r) * 100) / 100;
 }
 
+// Convert a USD price to the INR amount the gateway actually charges.
+export function usdToInr(usd: number, rate: string | number): number {
+  const r = typeof rate === "string" ? parseFloat(rate) : rate;
+  return Math.round(usd * (r || 83));
+}
+
 export function generateOrderId(): string {
   // Sunpay requires order_id to be A-Z0-9 with NO hyphens.
   const ts = Date.now().toString(36);

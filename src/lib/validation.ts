@@ -44,8 +44,9 @@ export const settingsSchema = z.object({
   maintenance_mode: z.enum(["true", "false"]).optional(),
   default_status: z.enum(ID_STATUSES).optional(),
   payment_enabled: z.enum(["true", "false"]).optional(),
-  unknown_assist: z.enum(["true", "false"]).optional(),
   unknown_reason: z.string().trim().max(120).optional(),
+  default_unban_left: z.string().regex(/^\d+$/).optional(),
+  default_price_usd: z.string().regex(/^\d+(\.\d+)?$/).optional(),
   // Background-image slots — a local /uploads path or a full URL, or "" to clear.
   img_page_bg: z.string().trim().max(500).optional(),
   img_hero_bg: z.string().trim().max(500).optional(),

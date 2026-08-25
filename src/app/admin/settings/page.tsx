@@ -42,8 +42,9 @@ export default function SettingsPage() {
           maintenance_mode: settings.maintenance_mode,
           default_status: settings.default_status,
           payment_enabled: settings.payment_enabled,
-          unknown_assist: settings.unknown_assist,
           unknown_reason: settings.unknown_reason,
+          default_unban_left: settings.default_unban_left,
+          default_price_usd: settings.default_price_usd,
         }),
       });
       const body = await res.json();
@@ -109,16 +110,24 @@ export default function SettingsPage() {
             </select>
           </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Unknown-ID assistance mode">
-              <select className="input" value={settings.unknown_assist ?? "false"} onChange={(e) => set("unknown_assist", e.target.value)}>
-                <option value="false">Off (show “information unavailable”)</option>
-                <option value="true">On (show assistance category + allow request)</option>
-              </select>
-            </Field>
-            <Field label="Assistance category (for unknown IDs)">
-              <input className="input" value={settings.unknown_reason ?? ""} onChange={(e) => set("unknown_reason", e.target.value)} />
-            </Field>
+          <div className="mt-2 rounded-xl border border-border p-4">
+            <p className="font-semibold">Defaults for IDs without a custom record</p>
+            <p className="mt-1 text-xs text-muted">
+              Every valid ID gets a result. Admin records override these values.
+            </p>
+            <div className="mt-4 space-y-4">
+              <Field label="Assistance category">
+                <input className="input" value={settings.unknown_reason ?? ""} onChange={(e) => set("unknown_reason", e.target.value)} />
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Unban left (times)">
+                  <input className="input" inputMode="numeric" value={settings.default_unban_left ?? ""} onChange={(e) => set("default_unban_left", e.target.value.replace(/\D/g, ""))} />
+                </Field>
+                <Field label="Request price ($ USD)">
+                  <input className="input" inputMode="decimal" value={settings.default_price_usd ?? ""} onChange={(e) => set("default_price_usd", e.target.value.replace(/[^\d.]/g, ""))} />
+                </Field>
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-4 pt-2">

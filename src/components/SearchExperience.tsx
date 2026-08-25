@@ -6,12 +6,13 @@ import { StatusBadge } from "./StatusBadge";
 import type { PublicIdResult } from "@/lib/types";
 
 // Honest wording — we check our own stored/available information, not Garena.
-const STEPS = [
-  "Checking available account information",
-  "Reading available information",
-  "Checking account status",
-  "Calculating request details",
-  "Preparing result",
+// ~4s total so each step stays readable without dragging.
+const STEPS: { label: string; ms: number }[] = [
+  { label: "Checking account information", ms: 800 },
+  { label: "Reading available information", ms: 800 },
+  { label: "Checking account status", ms: 900 },
+  { label: "Preparing review details", ms: 800 },
+  { label: "Calculating request details", ms: 700 },
 ];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -52,8 +53,9 @@ export function SearchExperience() {
 
     for (let i = 0; i < STEPS.length; i++) {
       setStep(i);
-      await sleep(600); // ~3s total
+      await sleep(STEPS[i].ms);
     }
+    setStep(STEPS.length); // all steps ticked
 
     const { ok, b } = await lookup;
     if (!ok) setState({ phase: "error", message: b.error || "Something went wrong." });
@@ -164,15 +166,21 @@ export function SearchExperience() {
 
 function CheckingSteps({ step }: { step: number }) {
   return (
-    <div className="card p-6">
-      <ul className="space-y-3">
-        {STEPS.map((label, i) => {
+    <div className="card animate-fade-up p-6">
+      <div className="text-center">
+        <p className="font-display text-sm font-bold uppercase tracking-widest text-muted">
+          Checking ID
+        </p>
+        <Spinner className="mx-auto mt-4 h-8 w-8 text-accent" />
+      </div>
+      <ul className="mt-6 space-y-3">
+        {STEPS.map((s, i) => {
           const done = i < step;
           const active = i === step;
           return (
-            <li key={label} className="flex items-center gap-3">
+            <li key={s.label} className="flex items-center gap-3 transition">
               <span
-                className={`grid h-6 w-6 place-items-center rounded-full text-xs transition ${
+                className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs transition ${
                   done
                     ? "bg-emerald-500 text-white"
                     : active
@@ -180,10 +188,10 @@ function CheckingSteps({ step }: { step: number }) {
                       : "border border-border text-muted"
                 }`}
               >
-                {done ? "✓" : active ? <Spinner className="h-3 w-3" /> : i + 1}
+                {done ? "✓" : active ? <Spinner className="h-3 w-3" /> : "○"}
               </span>
               <span className={done || active ? "font-medium text-ink" : "text-muted"}>
-                {label}
+                {s.label}
                 {active && "…"}
               </span>
             </li>
@@ -215,13 +223,15 @@ function ResultCard({
       </div>
 
       <div className="mt-5 grid gap-3 text-sm">
-        {data.banReason && <Row label="Reason" value={data.banReason} />}
-        {data.status === "BANNED" && (
-          <Row label="Ban Duration" value={data.banDuration || "Available information"} />
+        {data.banReason && (
+          <Row label={data.known ? "Reason" : "Assistance Category"} value={data.banReason} />
+        )}
+        {data.banDuration && (
+          <Row label={data.known ? "Ban Duration" : "Review Period"} value={data.banDuration} />
         )}
         {data.unbanLeft != null && <Row label="Unban Left" value={`${data.unbanLeft} times`} />}
         {data.unbanEnabled && <Row label="Assistance Status" value={assistance} />}
-        {data.unbanEnabled && <Row label="Request Fee" value={`$${data.priceUsd}`} />}
+        {data.unbanEnabled && <Row label="Request Price" value={`$${data.priceUsd}`} />}
 
         {data.status === "UNBANNED" && (
           <p className="rounded-xl bg-emerald-500/10 p-4 text-emerald-700">
@@ -234,9 +244,9 @@ function ResultCard({
           </p>
         )}
         {!data.known && (
-          <p className="rounded-xl bg-slate-100 p-4 text-slate-600">
-            Account information is unavailable for this ID. This is an independent
-            assistance service and is not affiliated with Garena.
+          <p className="rounded-xl bg-slate-100 p-4 text-xs text-slate-600">
+            This is an independent assistance service. The information shown is our
+            own review category and is not officially verified by or affiliated with Garena.
           </p>
         )}
       </div>

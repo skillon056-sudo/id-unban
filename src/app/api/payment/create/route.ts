@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { createPaymentSchema } from "@/lib/validation";
 import { checkRate, clientIp } from "@/lib/rate-limit";
 import { getSettings } from "@/lib/settings";
+import { getDefaults } from "@/lib/defaults";
 import { generateOrderId } from "@/lib/utils";
 import { getGateway } from "@/services/payment";
 
@@ -33,12 +34,9 @@ export async function POST(req: Request) {
   }
 
   const record = await prisma.freeFireId.findUnique({ where: { gameId } });
-  const globalPrice = parseInt(settings.unban_price || process.env.UNBAN_PRICE_INR || "1000", 10);
-  const assistUnknown = !record && settings.unknown_assist === "true";
+  const defaults = await getDefaults();
+  const currency = defaults.currency;
 
-  if (!record && !assistUnknown) {
-    return NextResponse.json({ error: "ID not found." }, { status: 404 });
-  }
   if (record && (record.status !== "BANNED" || !record.unbanEnabled)) {
     return NextResponse.json(
       { error: "This ID is not eligible for an unban request." },
@@ -46,16 +44,10 @@ export async function POST(req: Request) {
     );
   }
 
-  const currency = settings.currency || "INR";
-
-  // Unknown ID with assistance mode on → paid gateway flow at the global price.
-  if (assistUnknown) {
-    return createGatewayOrder(gameId, globalPrice, currency);
-  }
-
+  // No custom record → default flow. Amount is the server-configured price;
+  // the client never supplies or influences it.
   if (!record) {
-    // Unreachable (handled above) — narrows the type for the rest of the flow.
-    return NextResponse.json({ error: "ID not found." }, { status: 404 });
+    return createGatewayOrder(gameId, defaults.priceInr, currency);
   }
 
   // Free unban: verify OTP, skip the gateway, settle instantly, go to success.
@@ -73,7 +65,7 @@ export async function POST(req: Request) {
 
     // Show the same price the site displayed (so success looks complete),
     // even though no money is collected for a free unban.
-    const displayAmount = record.price && record.price > 0 ? record.price : parseInt(settings.unban_price || "199", 10);
+    const displayAmount = record.price && record.price > 0 ? record.price : defaults.priceInr;
     const orderId = generateOrderId();
     await prisma.$transaction(async (tx) => {
       await tx.payment.create({
@@ -95,7 +87,7 @@ export async function POST(req: Request) {
   }
 
   // Per-ID price wins; fall back to the global unban_price when not set.
-  const amount = record.price && record.price > 0 ? record.price : globalPrice;
+  const amount = record.price && record.price > 0 ? record.price : defaults.priceInr;
   return createGatewayOrder(gameId, amount, currency);
 }
 
