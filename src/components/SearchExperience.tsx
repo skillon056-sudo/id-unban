@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Spinner } from "./Spinner";
 import { StatusBadge } from "./StatusBadge";
 import { CheckingSteps, STEPS } from "./CheckingSteps";
-import { GARENA_APPEAL_URL } from "@/lib/links";
 import type { PublicIdResult } from "@/lib/types";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -138,7 +137,9 @@ function ResultCard({
         )}
         {data.banDuration && <Row label="Ban Duration" value={data.banDuration} />}
         {data.unbanLeft != null && <Row label="Unban Left" value={`${data.unbanLeft} times`} />}
-        <Row label="Check Cost" value="Free" />
+        {data.requestEnabled && (
+          <Row label="Service Fee" value={data.fee == null ? "Free" : `₹${data.fee}`} />
+        )}
 
         {data.status === "UNBANNED" && (
           <p className="rounded-xl bg-emerald-500/10 p-4 text-emerald-700">
@@ -156,26 +157,9 @@ function ResultCard({
         )}
       </div>
 
-      {/* Official appeal — the real route to getting a ban lifted. */}
-      <div className="mt-6 rounded-xl border border-accent/40 bg-accent/10 p-4">
-        <p className="text-sm font-semibold text-ink">Appeal this ban (free)</p>
-        <p className="mt-1 text-xs text-muted">
-          Bans are reviewed and lifted only by Garena, through their official
-          support channel. Submitting an appeal costs nothing.
-        </p>
-        <a
-          href={GARENA_APPEAL_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-primary mt-3 inline-flex w-full text-sm sm:w-auto"
-        >
-          Open Garena Support
-        </a>
-      </div>
-
       {data.requestEnabled && (
-        <button onClick={onRequest} disabled={busy} className="btn-ghost mt-3 w-full sm:w-auto">
-          {busy ? <Spinner className="h-5 w-5" /> : "Save this request"}
+        <button onClick={onRequest} disabled={busy} className="btn-primary mt-6 w-full sm:w-auto">
+          {busy ? <Spinner className="h-5 w-5" /> : data.ctaLabel}
         </button>
       )}
     </div>

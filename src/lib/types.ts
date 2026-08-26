@@ -27,4 +27,8 @@ export interface PublicIdResult {
   requestEnabled: boolean;
   unbanLeft: number | null;
   note: string;
+  /** Button text, set in admin Settings. */
+  ctaLabel: string;
+  /** Fee shown for banned IDs; null when the operator marked it free. */
+  fee: number | null;
 }

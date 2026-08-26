@@ -46,6 +46,9 @@ export default function SettingsPage() {
           default_unban_left: settings.default_unban_left,
           default_price_usd: settings.default_price_usd,
           result_note: settings.result_note,
+          cta_label: settings.cta_label,
+          service_fee: settings.service_fee,
+          service_free: settings.service_free,
         }),
       });
       const body = await res.json();
@@ -126,6 +129,35 @@ export default function SettingsPage() {
                 </Field>
                 <Field label="Request price ($ USD)">
                   <input className="input" inputMode="decimal" value={settings.default_price_usd ?? ""} onChange={(e) => set("default_price_usd", e.target.value.replace(/[^\d.]/g, ""))} />
+                </Field>
+              </div>
+              <Field label="Button label (shown on the result card)">
+                <input
+                  className="input"
+                  placeholder="e.g. Get Appeal Help"
+                  value={settings.cta_label ?? ""}
+                  onChange={(e) => set("cta_label", e.target.value)}
+                />
+              </Field>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Service fee (₹)">
+                  <input
+                    className="input"
+                    inputMode="decimal"
+                    disabled={settings.service_free === "true"}
+                    value={settings.service_fee ?? ""}
+                    onChange={(e) => set("service_fee", e.target.value.replace(/[^\d.]/g, ""))}
+                  />
+                </Field>
+                <Field label="Free for everyone">
+                  <select
+                    className="input"
+                    value={settings.service_free ?? "false"}
+                    onChange={(e) => set("service_free", e.target.value)}
+                  >
+                    <option value="false">No — charge the fee above</option>
+                    <option value="true">Yes — show Free to everyone</option>
+                  </select>
                 </Field>
               </div>
               <Field label="Result note (shown under the result — leave empty to hide)">

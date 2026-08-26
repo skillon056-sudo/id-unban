@@ -48,6 +48,10 @@ export async function GET(
   ]);
 
   const note = settings.result_note || "";
+  const ctaLabel = settings.cta_label || "Get Appeal Help";
+  // "free" toggle wins; otherwise show the configured fee.
+  const fee =
+    settings.service_free === "true" ? null : Number(settings.service_fee || 0) || null;
   const username = id?.username ?? null;
 
   // 1. Admin record wins — the operator's own curated data.
@@ -62,6 +66,8 @@ export async function GET(
       requestEnabled: record.status === "BANNED" && record.unbanEnabled,
       unbanLeft: record.unbanLeft,
       note,
+      ctaLabel,
+      fee,
     });
   }
 
@@ -79,6 +85,8 @@ export async function GET(
       requestEnabled: live.banned,
       unbanLeft: null,
       note,
+      ctaLabel,
+      fee,
     });
   }
 
@@ -94,6 +102,8 @@ export async function GET(
       requestEnabled: false,
       unbanLeft: null,
       note,
+      ctaLabel,
+      fee,
     });
   }
 
