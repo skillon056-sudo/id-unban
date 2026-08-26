@@ -10,7 +10,6 @@ interface Stats {
   unbannedIds: number;
   pendingIds: number;
   totalRequests: number;
-  successfulPayments: number;
 }
 
 const cards: { key: keyof Stats; label: string; tint: string }[] = [
@@ -19,7 +18,6 @@ const cards: { key: keyof Stats; label: string; tint: string }[] = [
   { key: "unbannedIds", label: "Unbanned", tint: "from-emerald-500/20 to-emerald-500/5" },
   { key: "pendingIds", label: "Pending", tint: "from-amber-500/20 to-amber-500/5" },
   { key: "totalRequests", label: "Unban Requests", tint: "from-violet-500/20 to-violet-500/5" },
-  { key: "successfulPayments", label: "Successful Payments", tint: "from-cyan-500/20 to-cyan-500/5" },
 ];
 
 export default function DashboardPage() {
@@ -36,7 +34,7 @@ export default function DashboardPage() {
   return (
     <div>
       <h1 className="font-display text-2xl font-bold">Dashboard</h1>
-      <p className="mt-1 text-sm text-muted">Overview of IDs, requests and payments.</p>
+      <p className="mt-1 text-sm text-muted">Overview of IDs and appeal requests.</p>
 
       {error && <p className="mt-6 text-red-600">{error}</p>}
 

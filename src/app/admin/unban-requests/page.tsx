@@ -14,7 +14,6 @@ interface Row {
   amount: number;
   currency: string;
   status: string;
-  paymentStatus: string;
   transactionId: string | null;
   createdAt: string;
 }
@@ -87,7 +86,6 @@ export default function UnbanRequestsPage() {
                 <th className="p-4 font-medium">Free Fire ID</th>
                 <th className="p-4 font-medium">Order ID</th>
                 <th className="p-4 font-medium">Amount</th>
-                <th className="p-4 font-medium">Payment</th>
                 <th className="p-4 font-medium">Request</th>
                 <th className="p-4 font-medium">Txn ID</th>
                 <th className="p-4 font-medium">Date</th>
@@ -99,7 +97,6 @@ export default function UnbanRequestsPage() {
                   <td className="p-4 font-mono">{r.gameId}</td>
                   <td className="p-4 font-mono text-xs">{r.orderId}</td>
                   <td className="p-4">{formatMoney(r.amount, r.currency)}</td>
-                  <td className="p-4"><StatusBadge status={r.paymentStatus} /></td>
                   <td className="p-4"><StatusBadge status={r.status} /></td>
                   <td className="p-4 font-mono text-xs text-muted">{r.transactionId || "—"}</td>
                   <td className="p-4 text-muted">{formatDate(r.createdAt)}</td>

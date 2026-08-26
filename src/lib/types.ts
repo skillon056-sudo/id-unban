@@ -16,15 +16,13 @@ export type RequestState = (typeof REQUEST_STATES)[number];
 // Public-facing view of an ID lookup — never leaks notes/internal fields.
 export interface PublicIdResult {
   gameId: string;
-  status: IdStatus;
-  known: boolean; // false = no custom admin record; default config was used
-  banReason: string | null; // assistance category / ban reason
-  banDuration: string | null; // review period / ban duration
-  unbanEnabled: boolean;
-  free: boolean; // unban is free — no payment, direct success
-  price: number; // effective unban fee in INR (charged by the gateway)
-  priceUsd: number; // same fee converted to USD (shown on the site)
-  currency: string;
-  unbanLeft: number | null; // "Unban Left: N times" (null = don't show)
-  note: string; // admin-editable note under the result ("" = hide)
+  status: IdStatus | "INFORMATION UNAVAILABLE";
+  /** Where the data came from: operator record, live check, or nothing. */
+  source: "admin" | "live" | "unavailable";
+  banReason: string | null;
+  banDuration: string | null;
+  /** Show the free appeal-request button. */
+  requestEnabled: boolean;
+  unbanLeft: number | null;
+  note: string;
 }

@@ -4,11 +4,12 @@ import { gameIdSchema } from "@/lib/validation";
 import { checkRate, clientIp } from "@/lib/rate-limit";
 import { getSettings } from "@/lib/settings";
 import { getDefaults } from "@/lib/defaults";
-import { inrToUsd } from "@/lib/utils";
+import { fetchLiveBanStatus } from "@/services/bancheck";
 import type { PublicIdResult } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+// Priority: admin record  >  live ban check  >  default configuration.
 export async function GET(
   req: Request,
   { params }: { params: { gameId: string } },
@@ -26,57 +27,60 @@ export async function GET(
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid Free Fire ID format." }, { status: 400 });
   }
+  const gameId = parsed.data;
 
-  const record = await prisma.freeFireId.findUnique({
-    where: { gameId: parsed.data },
-    select: {
-      gameId: true, status: true, banReason: true, banDuration: true,
-      unbanEnabled: true, freeUnban: true, price: true, unbanLeft: true,
-    },
-  });
+  const [record, settings, defaults] = await Promise.all([
+    prisma.freeFireId.findUnique({
+      where: { gameId },
+      select: {
+        gameId: true, status: true, banReason: true, banDuration: true,
+        unbanEnabled: true, unbanLeft: true,
+      },
+    }),
+    getSettings(),
+    getDefaults(),
+  ]);
 
-  const settings = await getSettings();
-  const defaults = await getDefaults();
-  const usdRate = defaults.usdRate;
+  const note = settings.result_note || "";
 
-  // No custom admin record → every valid ID still gets a result, built from
-  // the centralized default configuration. Values are clearly labelled as our
-  // own assistance data, never as officially verified Garena information.
-  if (!record) {
-    const result: PublicIdResult = {
-      gameId: parsed.data,
-      status: "BANNED",
-      known: false,
-      banReason: defaults.category,
-      banDuration: null,
-      unbanEnabled: true,
-      free: false,
-      price: defaults.priceInr,
-      priceUsd: defaults.priceUsd,
-      currency: defaults.currency,
-      unbanLeft: defaults.unbanLeft,
-      note: settings.result_note || "",
-    };
-    return NextResponse.json(result);
+  // 1. Admin record wins — it's the operator's own curated data.
+  if (record) {
+    return NextResponse.json<PublicIdResult>({
+      gameId: record.gameId,
+      status: record.status as PublicIdResult["status"],
+      source: "admin",
+      banReason: record.status === "BANNED" ? record.banReason || defaults.category : null,
+      banDuration: record.status === "BANNED" ? record.banDuration : null,
+      requestEnabled: record.status === "BANNED" && record.unbanEnabled,
+      unbanLeft: record.unbanLeft,
+      note,
+    });
   }
 
-  // Admin record overrides the defaults.
-  const price = record.price && record.price > 0 ? record.price : defaults.priceInr;
+  // 2. Live check (unofficial proxy of Garena's public anti-hack check).
+  const live = await fetchLiveBanStatus(gameId);
+  if (live) {
+    return NextResponse.json<PublicIdResult>({
+      gameId,
+      status: live.banned ? "BANNED" : "UNBANNED",
+      source: "live",
+      banReason: live.banned ? defaults.category : null,
+      banDuration: live.periodMonths ? `${live.periodMonths} months` : null,
+      requestEnabled: live.banned,
+      unbanLeft: null,
+      note,
+    });
+  }
 
-  const result: PublicIdResult = {
-    gameId: record.gameId,
-    status: record.status as PublicIdResult["status"],
-    known: true,
-    // Only surface a ban reason for banned accounts.
-    banReason: record.status === "BANNED" ? record.banReason || defaults.category : null,
-    banDuration: record.status === "BANNED" ? record.banDuration : null,
-    unbanEnabled: record.status === "BANNED" && record.unbanEnabled,
-    free: record.freeUnban,
-    price,
-    priceUsd: inrToUsd(price, usdRate),
-    currency: settings.currency || "INR",
-    unbanLeft: record.unbanLeft ?? defaults.unbanLeft,
-    note: settings.result_note || "",
-  };
-  return NextResponse.json(result);
+  // 3. Nothing available — say so plainly rather than inventing a status.
+  return NextResponse.json<PublicIdResult>({
+    gameId,
+    status: "INFORMATION UNAVAILABLE",
+    source: "unavailable",
+    banReason: null,
+    banDuration: null,
+    requestEnabled: false,
+    unbanLeft: null,
+    note,
+  });
 }

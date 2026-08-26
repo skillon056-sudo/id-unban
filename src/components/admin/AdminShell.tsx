@@ -9,8 +9,7 @@ const nav = [
   { href: "/admin", label: "Dashboard", exact: true },
   { href: "/admin/ids", label: "Free Fire IDs" },
   { href: "/admin/ids/new", label: "Add ID" },
-  { href: "/admin/unban-requests", label: "Unban Requests" },
-  { href: "/admin/payments", label: "Payments" },
+  { href: "/admin/unban-requests", label: "Requests" },
   { href: "/admin/appearance", label: "Appearance" },
   { href: "/admin/settings", label: "Settings" },
 ];

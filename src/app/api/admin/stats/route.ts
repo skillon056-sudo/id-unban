@@ -5,13 +5,12 @@ export const dynamic = "force-dynamic";
 
 // Auth enforced by middleware for /api/admin/*.
 export async function GET() {
-  const [total, banned, unbanned, pending, requests, payments] = await Promise.all([
+  const [total, banned, unbanned, pending, requests] = await Promise.all([
     prisma.freeFireId.count(),
     prisma.freeFireId.count({ where: { status: "BANNED" } }),
     prisma.freeFireId.count({ where: { status: "UNBANNED" } }),
     prisma.freeFireId.count({ where: { status: "PENDING" } }),
     prisma.unbanRequest.count(),
-    prisma.payment.count({ where: { status: "SUCCESS" } }),
   ]);
 
   return NextResponse.json({
@@ -20,6 +19,5 @@ export async function GET() {
     unbannedIds: unbanned,
     pendingIds: pending,
     totalRequests: requests,
-    successfulPayments: payments,
   });
 }

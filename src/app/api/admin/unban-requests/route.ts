@@ -20,19 +20,7 @@ export async function GET(req: Request) {
     take: 100,
   });
 
-  // Join payment status + txn id for the table.
-  const orderIds = requests.map((r) => r.orderId);
-  const payments = await prisma.payment.findMany({
-    where: { orderId: { in: orderIds } },
-    select: { orderId: true, status: true, transactionId: true },
-  });
-  const byOrder = Object.fromEntries(payments.map((p) => [p.orderId, p]));
-
-  const items = requests.map((r) => ({
-    ...r,
-    paymentStatus: byOrder[r.orderId]?.status ?? "UNKNOWN",
-    transactionId: byOrder[r.orderId]?.transactionId ?? null,
-  }));
+  const items = requests;
 
   return NextResponse.json({ items });
 }

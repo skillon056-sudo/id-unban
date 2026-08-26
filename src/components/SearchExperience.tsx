@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Spinner } from "./Spinner";
 import { StatusBadge } from "./StatusBadge";
 import { CheckingSteps, STEPS } from "./CheckingSteps";
+import { GARENA_APPEAL_URL } from "@/lib/links";
 import type { PublicIdResult } from "@/lib/types";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -18,13 +19,7 @@ export function SearchExperience() {
   const [gameId, setGameId] = useState("");
   const [state, setState] = useState<State>({ phase: "idle" });
   const [step, setStep] = useState(0);
-  const [paying, setPaying] = useState(false);
-
-  // OTP modal (free unban flow)
-  const [otpOpen, setOtpOpen] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [otpError, setOtpError] = useState<string | null>(null);
-  const [otpBusy, setOtpBusy] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   async function onSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -46,67 +41,32 @@ export function SearchExperience() {
       setStep(i);
       await sleep(STEPS[i].ms);
     }
-    setStep(STEPS.length); // all steps ticked
+    setStep(STEPS.length);
 
     const { ok, b } = await lookup;
     if (!ok) setState({ phase: "error", message: b.error || "Something went wrong." });
     else setState({ phase: "result", data: b as PublicIdResult });
   }
 
-  async function startGateway(id: string) {
-    setPaying(true);
+  // Records the request (free, no payment) and shows the confirmation page.
+  async function saveRequest(id: string) {
+    setBusy(true);
     try {
-      const res = await fetch("/api/payment/create", {
+      const res = await fetch("/api/request/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gameId: id }),
       });
       const body = await res.json();
       if (!res.ok || !body.redirectUrl) {
-        setState({ phase: "error", message: body.error || "Could not start payment." });
-        setPaying(false);
+        setState({ phase: "error", message: body.error || "Could not save the request." });
+        setBusy(false);
         return;
       }
       window.location.href = body.redirectUrl;
     } catch {
-      setState({ phase: "error", message: "Network error starting payment." });
-      setPaying(false);
-    }
-  }
-
-  function onUnban(data: PublicIdResult) {
-    if (data.free) {
-      setOtp("");
-      setOtpError(null);
-      setOtpOpen(true);
-    } else {
-      startGateway(data.gameId);
-    }
-  }
-
-  async function submitOtp(id: string) {
-    if (!otp.trim()) {
-      setOtpError("Please enter the OTP.");
-      return;
-    }
-    setOtpBusy(true);
-    setOtpError(null);
-    try {
-      const res = await fetch("/api/payment/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameId: id, otp: otp.trim() }),
-      });
-      const body = await res.json();
-      if (!res.ok || !body.redirectUrl) {
-        setOtpError(body.error || "Could not verify OTP.");
-        setOtpBusy(false);
-        return;
-      }
-      window.location.href = body.redirectUrl;
-    } catch {
-      setOtpError("Network error. Please try again.");
-      setOtpBusy(false);
+      setState({ phase: "error", message: "Network error. Please try again." });
+      setBusy(false);
     }
   }
 
@@ -136,35 +96,26 @@ export function SearchExperience() {
         )}
 
         {state.phase === "result" && (
-          <ResultCard data={state.data} paying={paying} onUnban={() => onUnban(state.data)} />
+          <ResultCard
+            data={state.data}
+            busy={busy}
+            onRequest={() => saveRequest(state.data.gameId)}
+          />
         )}
       </div>
-
-      {otpOpen && state.phase === "result" && (
-        <OtpModal
-          gameId={state.data.gameId}
-          otp={otp}
-          setOtp={setOtp}
-          error={otpError}
-          busy={otpBusy}
-          onClose={() => setOtpOpen(false)}
-          onSubmit={() => submitOtp(state.data.gameId)}
-        />
-      )}
     </div>
   );
 }
 
 function ResultCard({
   data,
-  paying,
-  onUnban,
+  busy,
+  onRequest,
 }: {
   data: PublicIdResult;
-  paying: boolean;
-  onUnban: () => void;
+  busy: boolean;
+  onRequest: () => void;
 }) {
-  const assistance = data.unbanEnabled ? "Available" : "Not available";
   return (
     <div className="card animate-fade-up p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -177,111 +128,53 @@ function ResultCard({
 
       <div className="mt-5 grid gap-3 text-sm">
         {data.banReason && (
-          <Row label={data.known ? "Reason" : "Assistance Category"} value={data.banReason} />
+          <Row
+            label={data.source === "admin" ? "Reason" : "Assistance Category"}
+            value={data.banReason}
+          />
         )}
-        {data.banDuration && (
-          <Row label={data.known ? "Ban Duration" : "Review Period"} value={data.banDuration} />
-        )}
+        {data.banDuration && <Row label="Ban Duration" value={data.banDuration} />}
         {data.unbanLeft != null && <Row label="Unban Left" value={`${data.unbanLeft} times`} />}
-        {data.unbanEnabled && <Row label="Assistance Status" value={assistance} />}
-        {data.unbanEnabled && (
-          <Row label="Request Price" value={`$${data.priceUsd} · ₹${data.price} INR`} />
-        )}
+        <Row label="Check Cost" value="Free" />
 
         {data.status === "UNBANNED" && (
           <p className="rounded-xl bg-emerald-500/10 p-4 text-emerald-700">
-            This account is active and not banned. No action needed.
+            This account is not showing as banned. No action needed.
           </p>
         )}
-        {data.status === "PENDING" && (
-          <p className="rounded-xl bg-amber-500/10 p-4 text-amber-700">
-            A request for this account is currently being processed.
+        {data.status === "INFORMATION UNAVAILABLE" && (
+          <p className="rounded-xl bg-slate-100 p-4 text-slate-600">
+            We couldn&apos;t retrieve information for this ID right now. You can still
+            check it directly on Garena&apos;s official support page.
           </p>
         )}
-        <div className="flex items-center gap-2 pt-1">
-          <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-xs text-white">
-            ✓
-          </span>
-          <span className="text-sm font-semibold text-emerald-700">Status Verified</span>
-        </div>
-
-        {/* Admin-editable note (Settings → Result note). Empty = hidden. */}
         {data.note && (
           <p className="rounded-xl bg-slate-100 p-4 text-xs text-slate-600">{data.note}</p>
         )}
       </div>
 
-      {data.unbanEnabled ? (
-        <button onClick={onUnban} disabled={paying} className="btn-primary mt-6 w-full sm:w-auto">
-          {paying ? <Spinner className="h-5 w-5" /> : "Unban ID"}
-        </button>
-      ) : (
-        data.status === "BANNED" && (
-          <p className="mt-6 rounded-xl bg-slate-100 p-4 text-slate-600">
-            This ID is not currently eligible for a self-service request.
-          </p>
-        )
-      )}
-    </div>
-  );
-}
-
-function OtpModal({
-  gameId,
-  otp,
-  setOtp,
-  error,
-  busy,
-  onClose,
-  onSubmit,
-}: {
-  gameId: string;
-  otp: string;
-  setOtp: (v: string) => void;
-  error: string | null;
-  busy: boolean;
-  onClose: () => void;
-  onSubmit: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={busy ? undefined : onClose} />
-      <div className="card relative z-10 w-full max-w-sm p-6">
-        <h2 className="font-display text-xl font-bold">Enter OTP</h2>
-        <p className="mt-1 text-sm text-muted">
-          Enter the verification OTP to unban ID <span className="font-semibold text-ink">{gameId}</span>.
+      {/* Official appeal — the real route to getting a ban lifted. */}
+      <div className="mt-6 rounded-xl border border-accent/40 bg-accent/10 p-4">
+        <p className="text-sm font-semibold text-ink">Appeal this ban (free)</p>
+        <p className="mt-1 text-xs text-muted">
+          Bans are reviewed and lifted only by Garena, through their official
+          support channel. Submitting an appeal costs nothing.
         </p>
-
-        {error && (
-          <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600">
-            {error}
-          </div>
-        )}
-
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSubmit();
-          }}
+        <a
+          href={GARENA_APPEAL_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-primary mt-3 inline-flex w-full text-sm sm:w-auto"
         >
-          <input
-            autoFocus
-            inputMode="numeric"
-            className="input mt-4 text-center text-lg tracking-[0.4em]"
-            placeholder="• • • •"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-          />
-          <div className="mt-5 flex gap-3">
-            <button type="submit" disabled={busy} className="btn-primary flex-1">
-              {busy ? <Spinner className="h-5 w-5" /> : "Verify & Unban"}
-            </button>
-            <button type="button" onClick={onClose} disabled={busy} className="btn-ghost">
-              Cancel
-            </button>
-          </div>
-        </form>
+          Open Garena Support
+        </a>
       </div>
+
+      {data.requestEnabled && (
+        <button onClick={onRequest} disabled={busy} className="btn-ghost mt-3 w-full sm:w-auto">
+          {busy ? <Spinner className="h-5 w-5" /> : "Save this request"}
+        </button>
+      )}
     </div>
   );
 }
