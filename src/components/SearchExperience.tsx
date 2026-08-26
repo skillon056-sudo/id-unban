@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Spinner } from "./Spinner";
 import { StatusBadge } from "./StatusBadge";
 import { CheckingSteps, STEPS } from "./CheckingSteps";
+import { AppealForm } from "./AppealForm";
 import type { PublicIdResult } from "@/lib/types";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -18,7 +19,6 @@ export function SearchExperience() {
   const [gameId, setGameId] = useState("");
   const [state, setState] = useState<State>({ phase: "idle" });
   const [step, setStep] = useState(0);
-  const [busy, setBusy] = useState(false);
 
   async function onSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -47,27 +47,7 @@ export function SearchExperience() {
     else setState({ phase: "result", data: b as PublicIdResult });
   }
 
-  // Records the request (free, no payment) and shows the confirmation page.
-  async function saveRequest(id: string) {
-    setBusy(true);
-    try {
-      const res = await fetch("/api/request/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameId: id }),
-      });
-      const body = await res.json();
-      if (!res.ok || !body.redirectUrl) {
-        setState({ phase: "error", message: body.error || "Could not save the request." });
-        setBusy(false);
-        return;
-      }
-      window.location.href = body.redirectUrl;
-    } catch {
-      setState({ phase: "error", message: "Network error. Please try again." });
-      setBusy(false);
-    }
-  }
+  const [formOpen, setFormOpen] = useState(false);
 
   return (
     <div id="check" className="scroll-mt-24">
@@ -97,22 +77,27 @@ export function SearchExperience() {
         {state.phase === "result" && (
           <ResultCard
             data={state.data}
-            busy={busy}
-            onRequest={() => saveRequest(state.data.gameId)}
+            onRequest={() => setFormOpen(true)}
           />
         )}
       </div>
+
+      {formOpen && state.phase === "result" && (
+        <AppealForm
+          gameId={state.data.gameId}
+          fee={state.data.fee}
+          onClose={() => setFormOpen(false)}
+        />
+      )}
     </div>
   );
 }
 
 function ResultCard({
   data,
-  busy,
   onRequest,
 }: {
   data: PublicIdResult;
-  busy: boolean;
   onRequest: () => void;
 }) {
   return (
@@ -158,8 +143,8 @@ function ResultCard({
       </div>
 
       {data.requestEnabled && (
-        <button onClick={onRequest} disabled={busy} className="btn-primary mt-6 w-full sm:w-auto">
-          {busy ? <Spinner className="h-5 w-5" /> : data.ctaLabel}
+        <button onClick={onRequest} className="btn-primary mt-6 w-full sm:w-auto">
+          {data.ctaLabel}
         </button>
       )}
     </div>

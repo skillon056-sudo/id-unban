@@ -30,6 +30,19 @@ export const idUpdateSchema = idInputSchema.partial().extend({
   gameId: gameIdSchema.optional(),
 });
 
+// Intake for a paid appeal-assistance case.
+export const appealIntakeSchema = z.object({
+  gameId: gameIdSchema,
+  contactEmail: z.string().trim().email("Enter a valid email address."),
+  contactPhone: z.string().trim().max(20).optional().or(z.literal("")),
+  details: z.string().trim().max(2000).optional().or(z.literal("")),
+});
+
+export const caseUpdateSchema = z.object({
+  status: z.enum(["PENDING", "IN_PROGRESS", "FILED", "CLOSED", "REJECTED"]).optional(),
+  adminNotes: z.string().trim().max(4000).optional().nullable(),
+});
+
 export const createPaymentSchema = z.object({
   gameId: gameIdSchema,
   otp: z.string().trim().max(20).optional(),

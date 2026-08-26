@@ -41,12 +41,22 @@ model FreeFireId {
 }
 
 model UnbanRequest {
-  id        String   @id @default(cuid())
-  gameId    String
-  orderId   String   @unique
-  amount    Int
-  currency  String   @default("INR")
-  status    String   @default("PENDING") // PENDING | SUBMITTED | REJECTED
+  id       String @id @default(cuid())
+  gameId   String
+  orderId  String @unique
+  amount   Int
+  currency String @default("INR")
+
+  // What the customer told us, so we can actually file the appeal for them.
+  contactEmail String?
+  contactPhone String?
+  details      String?
+
+  // Case workflow: NEW -> IN_PROGRESS -> FILED -> CLOSED (or REJECTED).
+  status     String  @default("PENDING")
+  adminNotes String?
+  filedAt    DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

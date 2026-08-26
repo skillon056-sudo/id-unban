@@ -11,16 +11,35 @@ export async function GET(req: Request) {
   const search = url.searchParams.get("search")?.trim() || "";
 
   const where: Prisma.UnbanRequestWhereInput = {};
-  if (["PENDING", "SUBMITTED", "REJECTED"].includes(status)) where.status = status;
-  if (search) where.OR = [{ gameId: { contains: search } }, { orderId: { contains: search } }];
+  if (["PENDING", "IN_PROGRESS", "FILED", "CLOSED", "REJECTED"].includes(status)) {
+    where.status = status;
+  }
+  if (search) {
+    where.OR = [
+      { gameId: { contains: search } },
+      { orderId: { contains: search } },
+      { contactEmail: { contains: search, mode: "insensitive" } },
+    ];
+  }
 
-  const requests = await prisma.unbanRequest.findMany({
+  const items = await prisma.unbanRequest.findMany({
     where,
     orderBy: { createdAt: "desc" },
     take: 100,
   });
 
-  const items = requests;
+  // Attach payment state so the operator can see what actually cleared.
+  const payments = await prisma.payment.findMany({
+    where: { orderId: { in: items.map((i) => i.orderId) } },
+    select: { orderId: true, status: true, transactionId: true },
+  });
+  const byOrder = Object.fromEntries(payments.map((p) => [p.orderId, p]));
 
-  return NextResponse.json({ items });
+  return NextResponse.json({
+    items: items.map((i) => ({
+      ...i,
+      paymentStatus: byOrder[i.orderId]?.status ?? (i.amount === 0 ? "FREE" : "—"),
+      transactionId: byOrder[i.orderId]?.transactionId ?? null,
+    })),
+  });
 }
