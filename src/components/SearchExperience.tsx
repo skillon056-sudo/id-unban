@@ -122,6 +122,9 @@ function ResultCard({
         <div>
           <p className="text-sm text-muted">Free Fire ID</p>
           <p className="font-display text-2xl font-bold tracking-wide">{data.gameId}</p>
+          {data.username && (
+            <p className="mt-1 text-sm font-medium text-accent2">{data.username}</p>
+          )}
         </div>
         <StatusBadge status={data.status} />
       </div>

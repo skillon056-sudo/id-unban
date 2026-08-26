@@ -16,6 +16,8 @@ export type RequestState = (typeof REQUEST_STATES)[number];
 // Public-facing view of an ID lookup — never leaks notes/internal fields.
 export interface PublicIdResult {
   gameId: string;
+  /** In-game nickname, when the ID lookup returns one. */
+  username: string | null;
   status: IdStatus | "INFORMATION UNAVAILABLE";
   /** Where the data came from: operator record, live check, or nothing. */
   source: "admin" | "live" | "unavailable";

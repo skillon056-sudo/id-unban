@@ -4,12 +4,12 @@ import { gameIdSchema } from "@/lib/validation";
 import { checkRate, clientIp } from "@/lib/rate-limit";
 import { getSettings } from "@/lib/settings";
 import { getDefaults } from "@/lib/defaults";
+import { lookupUsername } from "@/services/idcheck";
 import { fetchLiveBanStatus } from "@/services/bancheck";
 import type { PublicIdResult } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-// Priority: admin record  >  live ban check  >  default configuration.
 export async function GET(
   req: Request,
   { params }: { params: { gameId: string } },
@@ -25,11 +25,12 @@ export async function GET(
 
   const parsed = gameIdSchema.safeParse(params.gameId);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid Free Fire ID format." }, { status: 400 });
+    return NextResponse.json({ error: "Please enter a valid Free Fire ID." }, { status: 400 });
   }
   const gameId = parsed.data;
 
-  const [record, settings, defaults] = await Promise.all([
+  // Username lookup + admin record + settings in parallel.
+  const [record, settings, defaults, id] = await Promise.all([
     prisma.freeFireId.findUnique({
       where: { gameId },
       select: {
@@ -39,14 +40,25 @@ export async function GET(
     }),
     getSettings(),
     getDefaults(),
+    lookupUsername(gameId),
   ]);
 
   const note = settings.result_note || "";
+  const username = id?.username ?? null;
 
-  // 1. Admin record wins — it's the operator's own curated data.
+  // The account genuinely doesn't exist — say so instead of inventing a status.
+  if (id && !id.exists && !record) {
+    return NextResponse.json(
+      { error: "This Free Fire ID was not found. Please check the ID and try again." },
+      { status: 404 },
+    );
+  }
+
+  // 1. Admin record wins — the operator's own curated data.
   if (record) {
     return NextResponse.json<PublicIdResult>({
       gameId: record.gameId,
+      username,
       status: record.status as PublicIdResult["status"],
       source: "admin",
       banReason: record.status === "BANNED" ? record.banReason || defaults.category : null,
@@ -57,11 +69,12 @@ export async function GET(
     });
   }
 
-  // 2. Live check (unofficial proxy of Garena's public anti-hack check).
+  // 2. Optional live ban check (unofficial; off unless BANCHECK_API_URL is set).
   const live = await fetchLiveBanStatus(gameId);
   if (live) {
     return NextResponse.json<PublicIdResult>({
       gameId,
+      username,
       status: live.banned ? "BANNED" : "UNBANNED",
       source: "live",
       banReason: live.banned ? defaults.category : null,
@@ -72,9 +85,10 @@ export async function GET(
     });
   }
 
-  // 3. Nothing available — say so plainly rather than inventing a status.
+  // 3. ID is real, but we have no ban information for it.
   return NextResponse.json<PublicIdResult>({
     gameId,
+    username,
     status: "INFORMATION UNAVAILABLE",
     source: "unavailable",
     banReason: null,
