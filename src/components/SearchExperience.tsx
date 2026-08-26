@@ -77,28 +77,27 @@ export function SearchExperience() {
         {state.phase === "result" && (
           <ResultCard
             data={state.data}
+            formOpen={formOpen}
             onRequest={() => setFormOpen(true)}
+            onCancel={() => setFormOpen(false)}
           />
         )}
       </div>
 
-      {formOpen && state.phase === "result" && (
-        <AppealForm
-          gameId={state.data.gameId}
-          fee={state.data.fee}
-          onClose={() => setFormOpen(false)}
-        />
-      )}
     </div>
   );
 }
 
 function ResultCard({
   data,
+  formOpen,
   onRequest,
+  onCancel,
 }: {
   data: PublicIdResult;
+  formOpen: boolean;
   onRequest: () => void;
+  onCancel: () => void;
 }) {
   return (
     <div className="card animate-fade-up p-6">
@@ -143,9 +142,23 @@ function ResultCard({
       </div>
 
       {data.requestEnabled && (
-        <button onClick={onRequest} className="btn-primary mt-6 w-full sm:w-auto">
-          {data.ctaLabel}
-        </button>
+        <div className="mt-6">
+          {formOpen ? (
+            <AppealForm gameId={data.gameId} fee={data.fee} onCancel={onCancel} />
+          ) : (
+            <button onClick={onRequest} className="btn-primary w-full sm:w-auto">
+              {data.ctaLabel}
+            </button>
+          )}
+
+          {/* Says what the money buys, before anyone pays. */}
+          <p className="mt-3 text-xs leading-relaxed text-muted">
+            {data.fee == null ? "This" : `₹${data.fee}`} covers preparing your appeal,
+            submitting it to Garena support and following up. Garena decides the
+            outcome — we can&apos;t unban accounts or guarantee a result, and you can
+            appeal yourself for free at Garena support.
+          </p>
+        </div>
       )}
     </div>
   );

@@ -33,7 +33,10 @@ export const idUpdateSchema = idInputSchema.partial().extend({
 // Intake for a paid appeal-assistance case.
 export const appealIntakeSchema = z.object({
   gameId: gameIdSchema,
-  contactEmail: z.string().trim().email("Enter a valid email address."),
+  contactEmail: z
+    .string({ required_error: "Please enter your email address." })
+    .trim()
+    .email("Enter a valid email address."),
   contactPhone: z.string().trim().max(20).optional().or(z.literal("")),
   details: z.string().trim().max(2000).optional().or(z.literal("")),
 });
