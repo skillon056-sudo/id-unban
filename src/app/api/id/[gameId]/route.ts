@@ -10,11 +10,14 @@ import type { PublicIdResult } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
+// Priority: admin record > live ban check > ID exists but no ban data > 404.
+// The username lookup is display-only: it echoes the ID back for accounts that
+// don't expose a nickname (banned ones often don't), so it must never decide
+// whether an account exists.
 export async function GET(
   req: Request,
   { params }: { params: { gameId: string } },
 ) {
-  // Anti-enumeration: cap lookups per IP.
   const rl = checkRate(`id:${clientIp(req)}`, 30, 60_000);
   if (!rl.ok) {
     return NextResponse.json(
@@ -29,8 +32,8 @@ export async function GET(
   }
   const gameId = parsed.data;
 
-  // Username lookup + admin record + settings in parallel.
-  const [record, settings, defaults, id] = await Promise.all([
+  // All lookups in parallel — the ban check can be slow on a cold start.
+  const [record, settings, defaults, id, live] = await Promise.all([
     prisma.freeFireId.findUnique({
       where: { gameId },
       select: {
@@ -41,18 +44,11 @@ export async function GET(
     getSettings(),
     getDefaults(),
     lookupUsername(gameId),
+    fetchLiveBanStatus(gameId),
   ]);
 
   const note = settings.result_note || "";
   const username = id?.username ?? null;
-
-  // The account genuinely doesn't exist — say so instead of inventing a status.
-  if (id && !id.exists && !record) {
-    return NextResponse.json(
-      { error: "This Free Fire ID was not found. Please check the ID and try again." },
-      { status: 404 },
-    );
-  }
 
   // 1. Admin record wins — the operator's own curated data.
   if (record) {
@@ -69,8 +65,7 @@ export async function GET(
     });
   }
 
-  // 2. Optional live ban check (unofficial; off unless BANCHECK_API_URL is set).
-  const live = await fetchLiveBanStatus(gameId);
+  // 2. Live ban status. Reaching this means the account is real.
   if (live) {
     return NextResponse.json<PublicIdResult>({
       gameId,
@@ -78,23 +73,33 @@ export async function GET(
       status: live.banned ? "BANNED" : "UNBANNED",
       source: "live",
       banReason: live.banned ? defaults.category : null,
-      banDuration: live.periodMonths ? `${live.periodMonths} months` : null,
+      banDuration: live.periodMonths
+        ? `${live.periodMonths} month${live.periodMonths === 1 ? "" : "s"}`
+        : null,
       requestEnabled: live.banned,
       unbanLeft: null,
       note,
     });
   }
 
-  // 3. ID is real, but we have no ban information for it.
-  return NextResponse.json<PublicIdResult>({
-    gameId,
-    username,
-    status: "INFORMATION UNAVAILABLE",
-    source: "unavailable",
-    banReason: null,
-    banDuration: null,
-    requestEnabled: false,
-    unbanLeft: null,
-    note,
-  });
+  // 3. No ban data, but the username lookup confirmed a real account.
+  if (id?.exists) {
+    return NextResponse.json<PublicIdResult>({
+      gameId,
+      username,
+      status: "INFORMATION UNAVAILABLE",
+      source: "unavailable",
+      banReason: null,
+      banDuration: null,
+      requestEnabled: false,
+      unbanLeft: null,
+      note,
+    });
+  }
+
+  // 4. Nothing anywhere — only now say the ID wasn't found.
+  return NextResponse.json(
+    { error: "This Free Fire ID was not found. Please check the ID and try again." },
+    { status: 404 },
+  );
 }
