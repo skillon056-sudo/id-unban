@@ -6,6 +6,9 @@
 // fails soft: if the lookup errors, times out, or isn't configured, the caller
 // falls back to admin/default data.
 //
+// Timeout is generous: the upstream cold-starts slowly (~17s) then
+// responds in 1-2s.
+//
 // Recommended: self-host the proxy and set BANCHECK_API_URL to your own
 // deployment rather than depending on a shared public instance.
 
@@ -26,7 +29,7 @@ export async function fetchLiveBanStatus(uid: string): Promise<LiveBanStatus | n
 
   try {
     const res = await fetch(url, {
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(20000),
       cache: "no-store",
     });
     if (!res.ok) return null;
