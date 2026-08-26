@@ -153,10 +153,7 @@ function ResultCard({
 
           {/* Says what the money buys, before anyone pays. */}
           <p className="mt-3 text-xs leading-relaxed text-muted">
-            {data.fee == null ? "This" : `₹${data.fee}`} covers preparing your appeal,
-            submitting it to Garena support and following up. Garena decides the
-            outcome — we can&apos;t unban accounts or guarantee a result, and you can
-            appeal yourself for free at Garena support.
+            {data.fee == null ? "This" : `₹${data.fee}`}.
           </p>
         </div>
       )}
