@@ -1,4 +1,5 @@
 import { Navbar } from "@/components/Navbar";
+import { CountdownTimer } from "@/components/CountdownTimer";
 import { Footer } from "@/components/Footer";
 import { SearchExperience } from "@/components/SearchExperience";
 import { Faq } from "@/components/Faq";
@@ -29,6 +30,7 @@ export default async function HomePage() {
 
   return (
     <div style={bgStyle(s.img_page_bg, "rgba(255,255,255,0.9)")}>
+      <CountdownTimer />
       <Navbar />
       <main>
         {/* Top banner */}

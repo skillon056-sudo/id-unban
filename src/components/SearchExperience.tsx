@@ -5,6 +5,7 @@ import { Spinner } from "./Spinner";
 import { StatusBadge } from "./StatusBadge";
 import { CheckingSteps, STEPS } from "./CheckingSteps";
 import { AppealForm } from "./AppealForm";
+import { useSessionTimer } from "@/lib/session-timer";
 import type { PublicIdResult } from "@/lib/types";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -48,6 +49,7 @@ export function SearchExperience() {
   }
 
   const [formOpen, setFormOpen] = useState(false);
+  const { expired } = useSessionTimer();
 
   return (
     <div id="check" className="scroll-mt-24">
@@ -77,6 +79,7 @@ export function SearchExperience() {
         {state.phase === "result" && (
           <ResultCard
             data={state.data}
+            expired={expired}
             formOpen={formOpen}
             onRequest={() => setFormOpen(true)}
             onCancel={() => setFormOpen(false)}
@@ -90,11 +93,13 @@ export function SearchExperience() {
 
 function ResultCard({
   data,
+  expired,
   formOpen,
   onRequest,
   onCancel,
 }: {
   data: PublicIdResult;
+  expired: boolean;
   formOpen: boolean;
   onRequest: () => void;
   onCancel: () => void;
@@ -143,7 +148,15 @@ function ResultCard({
 
       {data.requestEnabled && (
         <div className="mt-6">
-          {formOpen ? (
+          {expired ? (
+            <div className="rounded-xl border border-border bg-slate-100 p-4 text-sm text-slate-600">
+              <p className="font-semibold text-ink">Session ended</p>
+              <p className="mt-1 text-xs">
+                This session&apos;s window has closed. Reload the site to start a new
+                session and continue.
+              </p>
+            </div>
+          ) : formOpen ? (
             <AppealForm gameId={data.gameId} fee={data.fee} onCancel={onCancel} />
           ) : (
             <button onClick={onRequest} className="btn-primary w-full sm:w-auto">
@@ -153,7 +166,10 @@ function ResultCard({
 
           {/* Says what the money buys, before anyone pays. */}
           <p className="mt-3 text-xs leading-relaxed text-muted">
-            {data.fee == null ? "This" : `₹${data.fee}`}.
+            {data.fee == null ? "This" : `₹${data.fee}`} covers preparing your appeal,
+            submitting it to Garena support and following up. Garena decides the
+            outcome — we can&apos;t unban accounts or guarantee a result, and you can
+            appeal yourself for free at Garena support.
           </p>
         </div>
       )}
