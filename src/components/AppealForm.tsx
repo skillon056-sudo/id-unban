@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Spinner } from "./Spinner";
 import { OpenInBrowser } from "./OpenInBrowser";
 import { detectInApp } from "@/lib/in-app-browser";
+import { identify, track } from "@/lib/pixel";
 
 // Minimal intake: just the email we need to deliver the service and report
 // back. Everything else is collected over email once the case is open.
@@ -38,6 +39,20 @@ export function AppealForm({
         setBusy(false);
         return;
       }
+      // Checkout started — attribute it to this customer.
+      identify(email);
+      track(
+        "InitiateCheckout",
+        {
+          value: fee ?? 0,
+          currency: "INR",
+          content_type: "product",
+          content_ids: [gameId],
+          contents: [{ id: gameId, quantity: 1, item_price: fee ?? 0 }],
+        },
+        body.orderId,
+      );
+
       // Relative URLs are our own pages and work fine in any browser.
       const external = body.redirectUrl.startsWith("http");
       if (external && detectInApp().isInApp) {

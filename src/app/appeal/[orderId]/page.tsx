@@ -7,6 +7,7 @@ import { Footer } from "@/components/Footer";
 import { Spinner } from "@/components/Spinner";
 import { StatusBadge } from "@/components/StatusBadge";
 import { GARENA_APPEAL_URL } from "@/lib/links";
+import { identify, trackOnce } from "@/lib/pixel";
 
 interface CaseInfo {
   orderId: string;
@@ -16,6 +17,7 @@ interface CaseInfo {
   status: string;
   paymentStatus: string;
   transactionId: string | null;
+  contactEmail: string | null;
   filedAt: string | null;
   createdAt: string;
 }
@@ -61,6 +63,18 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
           return;
         }
         setInfo(body);
+
+        // Confirmed paid → report the conversion exactly once.
+        if (body.paymentStatus === "SUCCESS" && body.amount > 0) {
+          identify(body.contactEmail);
+          trackOnce(body.orderId, "Purchase", {
+            value: body.amount,
+            currency: body.currency || "INR",
+            content_type: "product",
+            content_ids: [body.gameId],
+            contents: [{ id: body.gameId, quantity: 1, item_price: body.amount }],
+          });
+        }
         // Keep polling briefly while a payment is still settling.
         if (body.status === "PENDING" && ++tries < 20) setTimeout(poll, 4000);
       } catch {

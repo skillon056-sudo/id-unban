@@ -65,7 +65,7 @@ export class SunpayGateway implements PaymentGateway {
       currency: c.currency,
       method: c.method,
       notify_url: `${c.baseUrl}/api/payment/webhook`,
-      redirect_url: `${c.baseUrl}/payment/success?orderId=${input.orderId}`,
+      redirect_url: `${c.baseUrl}/appeal/${input.orderId}`,
     };
 
     // Sign the EXACT bytes we send — serialize once, sign that string, send it.

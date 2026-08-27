@@ -26,7 +26,7 @@ export async function GET(
   const c = await prisma.unbanRequest.findUnique({
     where: { orderId },
     select: {
-      orderId: true, gameId: true, amount: true, currency: true,
+      orderId: true, gameId: true, amount: true, currency: true, contactEmail: true,
       status: true, filedAt: true, createdAt: true,
     },
   });
