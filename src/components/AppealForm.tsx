@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Spinner } from "./Spinner";
+import { OpenInBrowser } from "./OpenInBrowser";
+import { detectInApp } from "@/lib/in-app-browser";
 
 // Minimal intake: just the email we need to deliver the service and report
 // back. Everything else is collected over email once the case is open.
@@ -17,6 +19,8 @@ export function AppealForm({
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Set when we can't redirect here (in-app browser) — user finishes elsewhere.
+  const [handoffUrl, setHandoffUrl] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -34,12 +38,21 @@ export function AppealForm({
         setBusy(false);
         return;
       }
+      // Relative URLs are our own pages and work fine in any browser.
+      const external = body.redirectUrl.startsWith("http");
+      if (external && detectInApp().isInApp) {
+        setHandoffUrl(body.redirectUrl);
+        setBusy(false);
+        return;
+      }
       window.location.href = body.redirectUrl;
     } catch {
       setError("Network error. Please try again.");
       setBusy(false);
     }
   }
+
+  if (handoffUrl) return <OpenInBrowser url={handoffUrl} />;
 
   return (
     <form onSubmit={submit} className="mt-4 animate-fade-up">
