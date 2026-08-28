@@ -13,6 +13,17 @@ export type PaymentState = (typeof PAYMENT_STATES)[number];
 export const REQUEST_STATES = ["PENDING", "SUBMITTED", "REJECTED"] as const;
 export type RequestState = (typeof REQUEST_STATES)[number];
 
+export interface PlayerProfile {
+  nickname: string | null;
+  level: number | null;
+  region: string | null;
+  likes: number | null;
+  brRank: number | null;
+  brPoints: number | null;
+  guild: string | null;
+  createdAt: string | null;
+}
+
 // Public-facing view of an ID lookup — never leaks notes/internal fields.
 export interface PublicIdResult {
   gameId: string;
@@ -27,6 +38,8 @@ export interface PublicIdResult {
   requestEnabled: boolean;
   unbanLeft: number | null;
   note: string;
+  /** Extra profile detail, when the player-info API is configured. */
+  profile: PlayerProfile | null;
   /** Button text, set in admin Settings. */
   ctaLabel: string;
   /** Fee shown for banned IDs; null when the operator marked it free. */

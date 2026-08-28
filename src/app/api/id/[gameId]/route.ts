@@ -6,6 +6,7 @@ import { getSettings } from "@/lib/settings";
 import { getDefaults } from "@/lib/defaults";
 import { lookupUsername } from "@/services/idcheck";
 import { fetchLiveBanStatus } from "@/services/bancheck";
+import { fetchPlayerInfo } from "@/services/playerinfo";
 import type { PublicIdResult } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export async function GET(
   const gameId = parsed.data;
 
   // All lookups in parallel — the ban check can be slow on a cold start.
-  const [record, settings, defaults, id, live] = await Promise.all([
+  const [record, settings, defaults, id, live, profile] = await Promise.all([
     prisma.freeFireId.findUnique({
       where: { gameId },
       select: {
@@ -45,6 +46,7 @@ export async function GET(
     getDefaults(),
     lookupUsername(gameId),
     fetchLiveBanStatus(gameId),
+    fetchPlayerInfo(gameId),
   ]);
 
   const note = settings.result_note || "";
@@ -52,7 +54,7 @@ export async function GET(
   // "free" toggle wins; otherwise show the configured fee.
   const fee =
     settings.service_free === "true" ? null : Number(settings.service_fee || 0) || null;
-  const username = id?.username ?? null;
+  const username = profile?.nickname ?? id?.username ?? null;
 
   // 1. Admin record wins — the operator's own curated data.
   if (record) {
@@ -66,6 +68,7 @@ export async function GET(
       requestEnabled: record.status === "BANNED" && record.unbanEnabled,
       unbanLeft: record.unbanLeft,
       note,
+      profile,
       ctaLabel,
       fee,
     });
@@ -85,6 +88,7 @@ export async function GET(
       requestEnabled: live.banned,
       unbanLeft: null,
       note,
+      profile,
       ctaLabel,
       fee,
     });
@@ -102,6 +106,7 @@ export async function GET(
       requestEnabled: false,
       unbanLeft: null,
       note,
+      profile,
       ctaLabel,
       fee,
     });

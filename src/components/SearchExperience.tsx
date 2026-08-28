@@ -117,6 +117,30 @@ function ResultCard({
         <StatusBadge status={data.status} />
       </div>
 
+      {data.profile && (
+        <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-slate-100 p-4 sm:grid-cols-3">
+          {data.profile.level != null && <Stat label="Level" value={String(data.profile.level)} />}
+          {data.profile.region && <Stat label="Region" value={data.profile.region} />}
+          {data.profile.brRank != null && <Stat label="BR Rank" value={String(data.profile.brRank)} />}
+          {data.profile.brPoints != null && (
+            <Stat label="Rank Points" value={data.profile.brPoints.toLocaleString()} />
+          )}
+          {data.profile.likes != null && (
+            <Stat label="Likes" value={data.profile.likes.toLocaleString()} />
+          )}
+          {data.profile.guild && <Stat label="Guild" value={data.profile.guild} />}
+          {data.profile.createdAt && (
+            <Stat
+              label="Created"
+              value={new Date(data.profile.createdAt).toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "short",
+              })}
+            />
+          )}
+        </div>
+      )}
+
       <div className="mt-5 grid gap-3 text-sm">
         {data.banReason && (
           <Row
@@ -173,6 +197,15 @@ function ResultCard({
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[0.65rem] uppercase tracking-wide text-muted">{label}</p>
+      <p className="truncate font-display text-base font-bold text-ink">{value}</p>
     </div>
   );
 }
