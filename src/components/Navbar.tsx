@@ -1,16 +1,24 @@
-import Link from "next/link";
+"use client";
 
-const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "FF ID Recovery";
+import Link from "next/link";
+import { useSite } from "@/lib/site-context";
 
 export function Navbar() {
+  const { logo, siteName } = useSite();
+
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-bg/70 backdrop-blur">
       <nav className="container-x flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-2 font-display text-lg font-extrabold">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-accent to-accent2 text-ink">
-            FF
-          </span>
-          <span className="hidden sm:inline">{siteName}</span>
+          {logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logo} alt={siteName} className="h-9 w-auto max-w-[160px] object-contain" />
+          ) : (
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-accent to-accent2 text-ink">
+              FF
+            </span>
+          )}
+          {!logo && <span className="hidden sm:inline">{siteName}</span>}
         </Link>
         <div className="flex items-center gap-2 text-sm">
           <Link href="/#faq" className="rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100">

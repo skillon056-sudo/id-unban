@@ -64,6 +64,7 @@ export const settingsSchema = z.object({
   default_unban_left: z.string().regex(/^\d+$/).optional(),
   result_note: z.string().trim().max(500).optional(),
   fee_note: z.string().trim().max(600).optional(),
+  site_logo: z.string().trim().max(500).optional(),
   cta_label: z.string().trim().max(40).optional(),
   service_free: z.enum(["true", "false"]).optional(),
   service_fee: z.string().regex(/^\d+(\.\d+)?$/).optional(),

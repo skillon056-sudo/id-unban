@@ -9,6 +9,7 @@ export interface ImageSlot {
 }
 
 export const IMAGE_SLOTS: ImageSlot[] = [
+  { key: "site_logo", label: "Site logo", hint: "Shown in the header. Wide/transparent PNG works best." },
   { key: "img_page_bg", label: "Page background", hint: "Shown faintly behind the whole homepage." },
   { key: "img_hero_bg", label: "Hero background", hint: "Large image behind the headline + search box." },
   { key: "img_banner_top", label: "Top banner", hint: "Wide banner strip above the hero." },
