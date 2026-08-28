@@ -124,7 +124,7 @@ export default function SettingsPage() {
                 <input className="input" value={settings.unknown_reason ?? ""} onChange={(e) => set("unknown_reason", e.target.value)} />
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Unban left (times)">
+                <Field label="Unbans remaining (default)">
                   <input className="input" inputMode="numeric" value={settings.default_unban_left ?? ""} onChange={(e) => set("default_unban_left", e.target.value.replace(/\D/g, ""))} />
                 </Field>
                 <Field label="Request price ($ USD)">

@@ -148,8 +148,9 @@ function ResultCard({
             value={data.banReason}
           />
         )}
-        {data.banDuration && <Row label="Ban Duration" value={data.banDuration} />}
-        {data.unbanLeft != null && <Row label="Unban Left" value={`${data.unbanLeft} times`} />}
+        {data.unbanLeft != null && (
+          <Row label="Unbans Remaining" value={String(data.unbanLeft)} />
+        )}
         {data.requestEnabled && (
           <Row label="Service Fee" value={data.fee == null ? "Free" : `₹${data.fee}`} />
         )}

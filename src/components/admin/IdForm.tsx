@@ -168,7 +168,7 @@ export function IdForm({
       </div>
 
       <div>
-        <label className="label" htmlFor="f-unbanleft">Unban left (times)</label>
+        <label className="label" htmlFor="f-unbanleft">Unbans remaining</label>
         <input
           id="f-unbanleft"
           inputMode="numeric"
@@ -180,7 +180,7 @@ export function IdForm({
             set("unbanLeft", digits ? Number(digits) : null);
           }}
         />
-        <p className="mt-1 text-xs text-muted">Shown on the site as “Unban Left: N times”. Leave empty to hide.</p>
+        <p className="mt-1 text-xs text-muted">Shown on the result card as “Unbans Remaining”. Leave empty to hide.</p>
       </div>
 
       <div>
