@@ -46,6 +46,7 @@ export default function SettingsPage() {
           default_unban_left: settings.default_unban_left,
           default_price_usd: settings.default_price_usd,
           result_note: settings.result_note,
+          fee_note: settings.fee_note,
           cta_label: settings.cta_label,
           service_fee: settings.service_fee,
           service_free: settings.service_free,
@@ -160,6 +161,15 @@ export default function SettingsPage() {
                   </select>
                 </Field>
               </div>
+              <Field label="Fee note (under the button — use {fee} for the amount; empty = default text)">
+                <textarea
+                  rows={4}
+                  className="input"
+                  placeholder="{fee} covers preparing your appeal, submitting it to Garena support…"
+                  value={settings.fee_note ?? ""}
+                  onChange={(e) => set("fee_note", e.target.value)}
+                />
+              </Field>
               <Field label="Result note (shown under the result — leave empty to hide)">
                 <textarea
                   rows={3}

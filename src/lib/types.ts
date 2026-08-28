@@ -40,6 +40,8 @@ export interface PublicIdResult {
   note: string;
   /** Extra profile detail, when the player-info API is configured. */
   profile: PlayerProfile | null;
+  /** Pre-payment disclosure shown under the CTA. */
+  feeNote: string;
   /** Button text, set in admin Settings. */
   ctaLabel: string;
   /** Fee shown for banned IDs; null when the operator marked it free. */

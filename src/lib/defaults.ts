@@ -4,6 +4,12 @@
 import { getSettings } from "./settings";
 import { usdToInr } from "./utils";
 
+// {fee} is replaced with the configured amount at request time.
+export const DEFAULT_FEE_NOTE =
+  "{fee} covers preparing your appeal, submitting it to Garena support and " +
+  "following up. Garena decides the outcome — we can't unban accounts or " +
+  "guarantee a result, and you can appeal yourself for free at Garena support.";
+
 export const DEFAULT_ASSISTANCE_CATEGORY = "USED HACK OR OTHER";
 export const DEFAULT_UNBAN_LEFT = 4; // shown as "Unban Left: 4 times"
 export const DEFAULT_REQUEST_PRICE_USD = Number(process.env.DEFAULT_REQUEST_PRICE_USD || 10);

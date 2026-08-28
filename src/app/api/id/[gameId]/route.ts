@@ -7,6 +7,7 @@ import { getDefaults } from "@/lib/defaults";
 import { lookupUsername } from "@/services/idcheck";
 import { fetchLiveBanStatus } from "@/services/bancheck";
 import { fetchPlayerInfo } from "@/services/playerinfo";
+import { DEFAULT_FEE_NOTE } from "@/lib/defaults";
 import type { PublicIdResult } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +57,13 @@ export async function GET(
     settings.service_free === "true" ? null : Number(settings.service_fee || 0) || null;
   const username = profile?.nickname ?? id?.username ?? null;
 
+  // Editable in Settings; blank falls back to the default so the paid flow
+  // always states what the money buys. {fee} is substituted with the amount.
+  const feeNote = (settings.fee_note || DEFAULT_FEE_NOTE).replace(
+    /{fee}/g,
+    fee == null ? "This" : `₹${fee}`,
+  );
+
   // 1. Admin record wins — the operator's own curated data.
   if (record) {
     return NextResponse.json<PublicIdResult>({
@@ -69,6 +77,7 @@ export async function GET(
       unbanLeft: record.unbanLeft ?? defaults.unbanLeft,
       note,
       profile,
+      feeNote,
       ctaLabel,
       fee,
     });
@@ -89,6 +98,7 @@ export async function GET(
       unbanLeft: defaults.unbanLeft,
       note,
       profile,
+      feeNote,
       ctaLabel,
       fee,
     });
@@ -107,6 +117,7 @@ export async function GET(
       unbanLeft: defaults.unbanLeft,
       note,
       profile,
+      feeNote,
       ctaLabel,
       fee,
     });
