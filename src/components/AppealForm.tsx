@@ -22,6 +22,7 @@ export function AppealForm({
   const [busy, setBusy] = useState(false);
   // Set when we can't redirect here (in-app browser) — user finishes elsewhere.
   const [handoffUrl, setHandoffUrl] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -60,6 +61,7 @@ export function AppealForm({
         setBusy(false);
         return;
       }
+      setRedirecting(true);
       window.location.href = body.redirectUrl;
     } catch {
       setError("Network error. Please try again.");
@@ -68,6 +70,20 @@ export function AppealForm({
   }
 
   if (handoffUrl) return <OpenInBrowser url={handoffUrl} />;
+
+  // The gateway page takes a moment to appear; show progress instead of a
+  // dead-looking button while the browser navigates away.
+  if (redirecting) {
+    return (
+      <div className="mt-4 flex items-center gap-3 rounded-xl border border-accent/50 bg-accent/10 p-4 animate-fade-up">
+        <Spinner className="h-5 w-5 text-ink" />
+        <div>
+          <p className="text-sm font-semibold text-ink">Opening secure payment…</p>
+          <p className="text-xs text-muted">Don&apos;t close this page.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={submit} className="mt-4 animate-fade-up">

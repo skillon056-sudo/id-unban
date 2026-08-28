@@ -33,6 +33,12 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        {/* Gateway checkout lives on another host — warm DNS+TLS now so the
+            post-click redirect isn't paying for a cold handshake. */}
+        <link rel="preconnect" href="https://cashier.sunpaytm.quest" />
+        <link rel="dns-prefetch" href="https://cashier.sunpaytm.quest" />
+      </head>
       <body>
         <MetaPixel />
         {children}
