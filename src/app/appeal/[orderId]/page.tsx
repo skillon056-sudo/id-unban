@@ -94,6 +94,13 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
           } catch {
             /* conversion reporting must never break the page */
           }
+
+          // Purchase has been handled (sent, or already reported by another
+          // tab). Continue to the deposit step if it's enabled.
+          if (body.depositNext) {
+            window.location.href = `/refundable-deposit?order=${encodeURIComponent(params.orderId)}`;
+            return;
+          }
         }
 
         // Keep polling briefly while a payment is still settling.

@@ -39,8 +39,17 @@ export async function POST(req: Request) {
   // ── 1. One parallel read ────────────────────────────────────────────
   const [settings, open] = await Promise.all([
     getSettings(),
+    // Reuse an unpaid case only for the SAME person retrying within a short
+    // window. Keying on gameId alone let two people searching the same Free
+    // Fire ID share one order — the second got the first person's checkout
+    // link and overwrote their contact email.
     prisma.unbanRequest.findFirst({
-      where: { gameId, status: "PENDING" },
+      where: {
+        gameId,
+        contactEmail,
+        status: "PENDING",
+        createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) },
+      },
       orderBy: { createdAt: "desc" },
       select: { orderId: true },
     }),

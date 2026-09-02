@@ -47,6 +47,9 @@ export default function SettingsPage() {
           default_price_usd: settings.default_price_usd,
           result_note: settings.result_note,
           fee_note: settings.fee_note,
+          deposit_enabled: settings.deposit_enabled,
+          deposit_amount: settings.deposit_amount,
+          deposit_terms: settings.deposit_terms,
           cta_label: settings.cta_label,
           service_fee: settings.service_fee,
           service_free: settings.service_free,
@@ -114,6 +117,36 @@ export default function SettingsPage() {
               <option value="true">On</option>
             </select>
           </Field>
+
+          <div className="mt-2 rounded-xl border border-border p-4">
+            <p className="font-semibold">Security deposit (step 2)</p>
+            <p className="mt-1 text-xs text-muted">
+              Shown after a verified service payment. The terms below are what the
+              customer reads before paying — write your real refund policy.
+            </p>
+            <div className="mt-4 space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Deposit step">
+                  <select className="input" value={settings.deposit_enabled ?? "false"} onChange={(e) => set("deposit_enabled", e.target.value)}>
+                    <option value="false">Off</option>
+                    <option value="true">On</option>
+                  </select>
+                </Field>
+                <Field label="Deposit amount (₹)">
+                  <input className="input" inputMode="numeric" value={settings.deposit_amount ?? ""} onChange={(e) => set("deposit_amount", e.target.value.replace(/[^0-9]/g, ""))} />
+                </Field>
+              </div>
+              <Field label="Deposit & refund terms (required before the step goes live)">
+                <textarea
+                  rows={7}
+                  className="input"
+                  placeholder="Why it is required · who qualifies for a refund · how long it takes · how it is sent · any deductions"
+                  value={settings.deposit_terms ?? ""}
+                  onChange={(e) => set("deposit_terms", e.target.value)}
+                />
+              </Field>
+            </div>
+          </div>
 
           <div className="mt-2 rounded-xl border border-border p-4">
             <p className="font-semibold">Defaults for IDs without a custom record</p>

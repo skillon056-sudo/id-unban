@@ -15,6 +15,8 @@ export async function settlePayment(v: VerifyResult): Promise<SettleOutcome> {
   const payment = await prisma.payment.findUnique({ where: { orderId: v.orderId } });
   if (!payment) return { ok: false, status: "FAILED", reason: "unknown order" };
 
+  const isDeposit = payment.kind === "DEPOSIT";
+
   // Never re-process an already-final payment.
   if (["SUCCESS", "FAILED", "CANCELLED"].includes(payment.status)) {
     return { ok: true, status: payment.status, reason: "already settled" };
@@ -43,6 +45,18 @@ export async function settlePayment(v: VerifyResult): Promise<SettleOutcome> {
           : payment.gatewayResponse,
       },
     });
+
+    if (isDeposit) {
+      // The deposit is held, not spent. Its refund record starts tracking now;
+      // the appeal case keeps whatever status it already had.
+      if (v.status === "SUCCESS") {
+        await tx.refund.updateMany({
+          where: { orderId: v.orderId, status: "NOT_REQUESTED" },
+          data: { status: "PENDING", requestedAt: new Date() },
+        });
+      }
+      return;
+    }
 
     if (v.status === "SUCCESS") {
       // Paid — the assistance case moves into our work queue.

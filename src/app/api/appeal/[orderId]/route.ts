@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getSettings } from "@/lib/settings";
 import { getGateway } from "@/services/payment";
 import { settlePayment } from "@/services/payment/settle";
 
@@ -37,8 +38,20 @@ export async function GET(
     select: { status: true, transactionId: true },
   });
 
+  // Is there a deposit step still to do for this order?
+  const settings = await getSettings();
+  const depositPaid = await prisma.payment.findFirst({
+    where: { parentOrderId: orderId, kind: "DEPOSIT", status: "SUCCESS" },
+    select: { orderId: true },
+  });
+  const depositNext =
+    settings.deposit_enabled === "true" &&
+    fresh?.status === "SUCCESS" &&
+    !depositPaid;
+
   return NextResponse.json({
     ...c,
+    depositNext,
     paymentStatus: fresh?.status ?? (c.amount === 0 ? "FREE" : "UNKNOWN"),
     transactionId: fresh?.transactionId ?? null,
   });

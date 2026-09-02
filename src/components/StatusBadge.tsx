@@ -13,6 +13,10 @@ const styles: Record<string, string> = {
   FILED: "bg-violet-50 text-violet-700 border-violet-200",
   CLOSED: "bg-slate-100 text-slate-600 border-slate-200",
   FREE: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  NOT_REQUESTED: "bg-slate-100 text-slate-600 border-slate-200",
+  PROCESSING: "bg-sky-50 text-sky-700 border-sky-200",
+  COMPLETED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  REFUNDED: "bg-violet-50 text-violet-700 border-violet-200",
   REJECTED: "bg-red-50 text-red-700 border-red-200",
 };
 

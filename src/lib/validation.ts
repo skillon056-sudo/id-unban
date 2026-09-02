@@ -41,6 +41,24 @@ export const appealIntakeSchema = z.object({
   details: z.string().trim().max(2000).optional().or(z.literal("")),
 });
 
+// UPI handles look like name@bank — letters, digits, dot/dash/underscore.
+export const upiIdSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(/^[a-z0-9._-]{2,64}@[a-z]{2,32}$/, "Enter a valid UPI ID, like name@bank.");
+
+export const depositIntakeSchema = z.object({
+  orderId: z.string().trim().min(6).max(40),
+  upiId: upiIdSchema,
+});
+
+export const refundUpdateSchema = z.object({
+  status: z.enum(["NOT_REQUESTED", "PENDING", "PROCESSING", "COMPLETED", "FAILED"]).optional(),
+  reference: z.string().trim().max(120).optional().nullable(),
+  notes: z.string().trim().max(2000).optional().nullable(),
+});
+
 export const caseUpdateSchema = z.object({
   status: z.enum(["PENDING", "IN_PROGRESS", "FILED", "CLOSED", "REJECTED"]).optional(),
   adminNotes: z.string().trim().max(4000).optional().nullable(),
@@ -61,8 +79,11 @@ export const settingsSchema = z.object({
   default_status: z.enum(ID_STATUSES).optional(),
   payment_enabled: z.enum(["true", "false"]).optional(),
   unknown_reason: z.string().trim().max(120).optional(),
+  deposit_amount: z.string().regex(/^\d+$/).optional(),
   default_unban_left: z.string().regex(/^\d+$/).optional(),
   result_note: z.string().trim().max(500).optional(),
+  deposit_enabled: z.enum(["true", "false"]).optional(),
+  deposit_terms: z.string().trim().max(4000).optional(),
   fee_note: z.string().trim().max(600).optional(),
   site_logo: z.string().trim().max(500).optional(),
   cta_label: z.string().trim().max(40).optional(),
