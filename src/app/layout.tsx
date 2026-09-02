@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SiteProvider } from "@/lib/site-context";
+import { InAppBrowserGate } from "@/components/InAppBrowserGate";
 import { getSettings } from "@/lib/settings";
 import { MetaPixel } from "@/components/MetaPixel";
 
@@ -49,6 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <MetaPixel />
+        <InAppBrowserGate />
         <SiteProvider value={branding}>{children}</SiteProvider>
       </body>
     </html>
