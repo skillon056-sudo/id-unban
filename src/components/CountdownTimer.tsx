@@ -5,13 +5,13 @@ import { useSessionTimer, splitTime } from "@/lib/session-timer";
 // Session countdown shown at the top of the page. Timestamp-driven, so a
 // refresh, tab switch or device sleep never restarts or drifts it.
 export function CountdownTimer() {
-  const { remainingMs, expired } = useSessionTimer();
+  const { remainingMs } = useSessionTimer();
 
   return (
     <section className="border-b border-border bg-surface">
       <div className="container-x py-5 text-center sm:py-6">
         <p className="font-display text-[0.7rem] font-bold uppercase tracking-[0.25em] text-muted sm:text-xs">
-          {expired ? "Session ended" : "Session ends in"}
+          Session ends in
         </p>
 
         {remainingMs == null ? (
@@ -19,19 +19,11 @@ export function CountdownTimer() {
           <p className="mt-2 font-display text-4xl font-extrabold tabular-nums text-ink/20 sm:text-5xl">
             --&nbsp;:&nbsp;--&nbsp;:&nbsp;--
           </p>
-        ) : expired ? (
-          <p className="mt-2 font-display text-3xl font-extrabold uppercase tracking-wide text-muted sm:text-4xl">
-            00 : 00 : 00
-          </p>
         ) : (
           <Digits ms={remainingMs} />
         )}
 
-        <p className="mt-2 text-xs text-muted">
-          {expired
-            ? "This session's window has closed. Reopen the site to start a new one."
-            : "Limited session"}
-        </p>
+        <p className="mt-2 text-xs text-muted">Limited session</p>
       </div>
     </section>
   );

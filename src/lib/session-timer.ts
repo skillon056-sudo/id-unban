@@ -5,19 +5,19 @@ import { useEffect, useState } from "react";
 // Per-visitor session window. The end timestamp is generated once and stored,
 // so refreshing, navigating or sleeping the device never restarts it.
 //
-// Display only: this is a UX session window, not a security boundary. Anything
-// that must actually be enforced is checked server-side (see the appeal API).
+// Display only. Nothing on the site is gated on this — the server stays
+// authoritative for search, payments and every other business rule.
 
 const KEY = "ff_session_end";
-const MIN_MS = 15 * 60 * 60 * 1000; // 15h
-const MAX_MS = 20 * 60 * 60 * 1000; // 20h
+const MIN_MS = 40 * 60 * 60 * 1000; // 40h
+const MAX_MS = 48 * 60 * 60 * 1000; // 48h
 
 function readEnd(): number | null {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const end = Number(raw);
-    // Reject junk, and anything further out than a full window (stale/tampered).
+    // Reject junk, and anything beyond a full window (stale or tampered).
     if (!Number.isFinite(end) || end <= 0 || end > Date.now() + MAX_MS) return null;
     return end;
   } catch {
@@ -38,7 +38,6 @@ function createEnd(): number {
 export interface SessionTimer {
   /** null until mounted on the client, to avoid a hydration mismatch. */
   remainingMs: number | null;
-  expired: boolean;
 }
 
 export function useSessionTimer(): SessionTimer {
@@ -46,29 +45,38 @@ export function useSessionTimer(): SessionTimer {
   const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
-    const e = readEnd() ?? createEnd();
-    setEnd(e);
+    let current = readEnd() ?? createEnd();
+    setEnd(current);
     setNow(Date.now());
 
     // Recompute from the clock every tick, never by decrementing a counter —
-    // so a slept/backgrounded tab catches up instantly on wake.
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    const onVisible = () => setNow(Date.now());
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onVisible);
+    // so a slept or backgrounded tab catches up instantly on wake.
+    const tick = () => {
+      const t = Date.now();
+      // Window elapsed: roll straight into a fresh one. The site never closes.
+      if (t >= current) {
+        current = createEnd();
+        setEnd(current);
+      }
+      setNow(t);
+    };
+
+    const id = setInterval(tick, 1000);
+    document.addEventListener("visibilitychange", tick);
+    window.addEventListener("focus", tick);
 
     return () => {
       clearInterval(id);
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onVisible);
+      document.removeEventListener("visibilitychange", tick);
+      window.removeEventListener("focus", tick);
     };
   }, []);
 
-  if (end == null || now == null) return { remainingMs: null, expired: false };
-  const remainingMs = Math.max(0, end - now);
-  return { remainingMs, expired: remainingMs === 0 };
+  if (end == null || now == null) return { remainingMs: null };
+  return { remainingMs: Math.max(0, end - now) };
 }
 
+/** Splits a duration into padded H:M:S. Hours can exceed 24. */
 export function splitTime(ms: number) {
   const total = Math.floor(ms / 1000);
   return {

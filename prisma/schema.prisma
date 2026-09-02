@@ -55,6 +55,9 @@ model UnbanRequest {
   // Case workflow: NEW -> IN_PROGRESS -> FILED -> CLOSED (or REJECTED).
   status     String  @default("PENDING")
   adminNotes String?
+  // Set once the Purchase conversion has been reported, so refreshes,
+  // extra tabs and webhook retries can never double-count it.
+  purchaseReported Boolean @default(false)
   filedAt    DateTime?
 
   createdAt DateTime @default(now())

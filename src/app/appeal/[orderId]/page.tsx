@@ -7,7 +7,7 @@ import { Footer } from "@/components/Footer";
 import { Spinner } from "@/components/Spinner";
 import { StatusBadge } from "@/components/StatusBadge";
 import { GARENA_APPEAL_URL } from "@/lib/links";
-import { identify, trackOnce } from "@/lib/pixel";
+import { identify, track } from "@/lib/pixel";
 
 interface CaseInfo {
   orderId: string;
@@ -64,21 +64,42 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
         }
         setInfo(body);
 
-        // Confirmed paid → report the conversion exactly once.
+        // Confirmed paid → ask the server for permission to report it.
+        // The claim is atomic in the DB, so only one caller ever wins.
         if (body.paymentStatus === "SUCCESS" && body.amount > 0) {
-          identify(body.contactEmail);
-          trackOnce(body.orderId, "Purchase", {
-            value: body.amount,
-            currency: body.currency || "INR",
-            content_type: "product",
-            content_ids: [body.gameId],
-            contents: [{ id: body.gameId, quantity: 1, item_price: body.amount }],
-          });
+          try {
+            const claim = await fetch(
+              `/api/appeal/${encodeURIComponent(params.orderId)}/purchase-claim`,
+              { method: "POST" },
+            ).then((r) => r.json());
+
+            if (claim.claimed) {
+              identify(body.contactEmail);
+              // Value and currency come from the verified payment record.
+              track(
+                "Purchase",
+                {
+                  value: claim.value,
+                  currency: claim.currency,
+                  content_type: "product",
+                  content_ids: [body.gameId],
+                  contents: [{ id: body.gameId, quantity: 1, item_price: claim.value }],
+                },
+                claim.eventId,
+              );
+              if (process.env.NODE_ENV !== "production") {
+                console.log("[pixel] Purchase fired", claim);
+              }
+            }
+          } catch {
+            /* conversion reporting must never break the page */
+          }
         }
+
         // Keep polling briefly while a payment is still settling.
-        if (body.status === "PENDING" && ++tries < 20) setTimeout(poll, 4000);
+        if (body.paymentStatus !== "SUCCESS" && ++tries < 40) setTimeout(poll, 3000);
       } catch {
-        if (active && ++tries < 20) setTimeout(poll, 4000);
+        if (active && ++tries < 40) setTimeout(poll, 3000);
       }
     }
     poll();
