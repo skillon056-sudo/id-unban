@@ -34,6 +34,24 @@ export async function POST(req: Request) {
 
   const outcome = await settlePayment(verified);
 
+  // The Sunpay merchant account is shared with another site, whose webhooks
+  // reach this endpoint too — signed with the same secret, but for order ids
+  // that were never ours. Those are expected; note them and move on.
+  //
+  // An unmatched id in OUR format is the alarming case: it means a customer
+  // paid and we failed to credit them, so log the whole payload to match it up.
+  if (!outcome.ok) {
+    const looksOurs = /^FF[A-Z0-9]+$/.test(verified.orderId);
+    if (looksOurs) {
+      console.error(
+        `[webhook] UNMATCHED order=${verified.orderId} reason=${outcome.reason} raw=` +
+          JSON.stringify(verified.raw),
+      );
+    } else {
+      console.log(`[webhook] ignored foreign order=${verified.orderId} (not ours)`);
+    }
+  }
+
   console.log(
     `[webhook] settled order=${verified.orderId} result=${outcome.status} ` +
       `${outcome.reason ? `(${outcome.reason}) ` : ""}in ${Date.now() - t0}ms`,
