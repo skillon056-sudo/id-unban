@@ -9,8 +9,8 @@ import { useEffect, useState } from "react";
 // authoritative for search, payments and every other business rule.
 
 const KEY = "ff_session_end";
-const MIN_MS = 40 * 60 * 60 * 1000; // 40h
-const MAX_MS = 48 * 60 * 60 * 1000; // 48h
+const MIN_MS = 15 * 60 * 60 * 1000; // 15h
+const MAX_MS = 20 * 60 * 60 * 1000; // 20h
 
 function readEnd(): number | null {
   try {
