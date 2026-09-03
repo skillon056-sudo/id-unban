@@ -54,7 +54,7 @@ export async function POST(req: Request) {
 
   const request = await prisma.unbanRequest.findUnique({
     where: { orderId },
-    select: { id: true },
+    select: { id: true, contactEmail: true, contactPhone: true },
   });
   if (!request) {
     return NextResponse.json({ error: "Request not found." }, { status: 404 });
@@ -88,7 +88,12 @@ export async function POST(req: Request) {
 
   try {
     const { redirectUrl, raw } = await getGateway().createOrder({
-      orderId: depositOrderId, gameId: service.gameId, amount, currency,
+      orderId: depositOrderId,
+      gameId: service.gameId,
+      amount,
+      currency,
+      customerEmail: request.contactEmail,
+      customerPhone: request.contactPhone,
     });
     await prisma.payment.update({
       where: { orderId: depositOrderId },

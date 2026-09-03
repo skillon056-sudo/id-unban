@@ -112,7 +112,14 @@ export async function POST(req: Request) {
   // Sunpay only needs orderId/amount/currency, all known already — so there's
   // no reason to make it wait behind the database.
   const gatewayCall = getGateway()
-    .createOrder({ orderId, gameId, amount: fee, currency })
+    .createOrder({
+      orderId,
+      gameId,
+      amount: fee,
+      currency,
+      customerEmail: contactEmail,
+      customerPhone: contactPhone || null,
+    })
     .then((r) => ({ ok: true as const, ...r }))
     .catch((err) => ({ ok: false as const, err }));
 

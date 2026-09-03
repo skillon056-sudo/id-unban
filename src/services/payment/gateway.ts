@@ -10,6 +10,11 @@ export interface CreateOrderInput {
   gameId: string;
   amount: number; // whole units (e.g. 199)
   currency: string;
+  // Passed to the gateway so it can send its own payment receipt — for most
+  // customers that is the only confirmation they get, since the gateway's
+  // checkout has no way to send them back to us.
+  customerEmail?: string | null;
+  customerPhone?: string | null;
 }
 
 export interface CreateOrderResult {
