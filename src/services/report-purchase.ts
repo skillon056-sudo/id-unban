@@ -36,8 +36,23 @@ export async function reportPurchaseOnce(
 
   const request = await prisma.unbanRequest.findUnique({
     where: { orderId },
-    select: { contactEmail: true },
+    select: { contactEmail: true, attribution: true },
   });
+
+  // Whatever the live browser gave us wins; otherwise fall back to what was
+  // captured at checkout, which is all we have for a payer who never came back.
+  let saved: { fbc?: string; fbp?: string; ip?: string; ua?: string } = {};
+  try {
+    saved = JSON.parse(request?.attribution ?? "{}") ?? {};
+  } catch {
+    /* unreadable — send what we have */
+  }
+  const identifiers = {
+    fbc: extra.fbc ?? saved.fbc ?? null,
+    fbp: extra.fbp ?? saved.fbp ?? null,
+    clientIp: extra.clientIp ?? saved.ip ?? null,
+    userAgent: extra.userAgent ?? saved.ua ?? null,
+  };
 
   const sent = await sendPurchaseToMeta({
     eventId: orderId,
@@ -46,7 +61,7 @@ export async function reportPurchaseOnce(
     contentId: payment.gameId,
     email: request?.contactEmail,
     sourceUrl: `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/appeal/${orderId}`,
-    ...extra,
+    ...identifiers,
   });
 
   // A transient Meta failure must not burn the conversion — release the claim

@@ -58,6 +58,10 @@ model UnbanRequest {
   // Set once the Purchase conversion has been reported, so refreshes,
   // extra tabs and webhook retries can never double-count it.
   purchaseReported Boolean @default(false)
+  // Ad-click identifiers captured while the browser was still here (_fbc/_fbp,
+  // ip, user agent), replayed in the server-side conversion. Without them the
+  // gateway's dead end would cost us the link back to the ad that paid for it.
+  attribution      String?
   filedAt    DateTime?
 
   createdAt DateTime @default(now())

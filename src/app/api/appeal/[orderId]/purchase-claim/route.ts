@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { clientIp } from "@/lib/rate-limit";
+import { readCookie } from "@/lib/cookies";
 import { reportPurchaseOnce } from "@/services/report-purchase";
 
 export const dynamic = "force-dynamic";
@@ -33,16 +34,12 @@ export async function POST(
     return NextResponse.json({ claimed: false, reason: "not a verified paid order" });
   }
 
-  const cookies = req.headers.get("cookie") ?? "";
-  const cookie = (name: string) =>
-    cookies.match(new RegExp(`(?:^|;\s*)${name}=([^;]+)`))?.[1] ?? null;
-
   // No-op when settlement already sent it; retries if that send had failed.
   await reportPurchaseOnce(orderId, {
     clientIp: clientIp(req),
     userAgent: req.headers.get("user-agent"),
-    fbp: cookie("_fbp"),
-    fbc: cookie("_fbc"),
+    fbp: readCookie(req, "_fbp"),
+    fbc: readCookie(req, "_fbc"),
   });
 
   return NextResponse.json({

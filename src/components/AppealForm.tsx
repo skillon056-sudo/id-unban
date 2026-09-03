@@ -33,7 +33,13 @@ export function AppealForm({
       const res = await fetch("/api/appeal/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameId, contactEmail: email }),
+        // Carried from the ad link so the conversion can be tied back to it
+        // even if the pixel never got to write its cookie.
+        body: JSON.stringify({
+          gameId,
+          contactEmail: email,
+          fbclid: new URLSearchParams(window.location.search).get("fbclid") ?? undefined,
+        }),
       });
       const body = await res.json();
       if (!res.ok || !body.redirectUrl) {

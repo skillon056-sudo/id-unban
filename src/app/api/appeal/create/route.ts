@@ -5,6 +5,7 @@ import { checkRate, clientIp } from "@/lib/rate-limit";
 import { getSettings } from "@/lib/settings";
 import { generateOrderId } from "@/lib/utils";
 import { getGateway } from "@/services/payment";
+import { readCookie } from "@/lib/cookies";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,17 @@ export async function POST(req: Request) {
     );
   }
   const { gameId, contactEmail, contactPhone, details } = parsed.data;
+
+  // The browser is here now and won't be later: the gateway has no way to send
+  // the payer back, so the conversion is reported from the webhook long after
+  // this tab is gone. Keep the ad-click identifiers so that event can still be
+  // tied to the ad that produced it.
+  const attribution = JSON.stringify({
+    fbc: fbc(req, (body as { fbclid?: string })?.fbclid),
+    fbp: readCookie(req, "_fbp"),
+    ip: clientIp(req),
+    ua: req.headers.get("user-agent"),
+  });
 
   // ── 1. One parallel read ────────────────────────────────────────────
   const [settings, open] = await Promise.all([
@@ -70,6 +82,7 @@ export async function POST(req: Request) {
     details: details || null,
     amount: fee,
     currency,
+    attribution,
   };
 
   // ── Free mode: no gateway, single write, straight to the case page ──
@@ -128,4 +141,14 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ orderId, redirectUrl: result.redirectUrl });
+}
+
+
+// Meta's click id. The pixel normally writes it to the _fbc cookie on landing;
+// when it hasn't (blocked, or a hand-off out of an in-app browser beat it), the
+// raw fbclid from the ad link is enough to build the same value.
+function fbc(req: Request, fbclid?: string): string | null {
+  const stored = readCookie(req, "_fbc");
+  if (stored) return stored;
+  return fbclid ? `fb.1.${Date.now()}.${fbclid}` : null;
 }
