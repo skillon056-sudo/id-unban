@@ -1,0 +1,56 @@
+<!--
+  Paste this into the Systeme.io landing page (Settings -> Custom code /
+  Tracking code, in the FOOTER or BODY section).
+
+  Why: the Instagram ad puts ?fbclid=... on the landing page URL. That value is
+  what ties a later purchase back to the ad set that paid for it. The landing
+  page button drops it, so every visitor arrives at ffidunban.online anonymous
+  and their conversion cannot be credited to the ad.
+
+  This copies fbclid (and any utm_* the ad carries) onto every link that points
+  at ffidunban.online, both on load and again at click time so buttons the page
+  builder adds later are covered too.
+-->
+<script>
+(function () {
+  var incoming = new URLSearchParams(window.location.search);
+  if (!incoming.toString()) return;
+
+  function forward(href) {
+    try {
+      var u = new URL(href, window.location.href);
+      if (!/(^|\.)ffidunban\.online$/i.test(u.hostname)) return null;
+      var changed = false;
+      incoming.forEach(function (value, key) {
+        if (!u.searchParams.has(key)) {
+          u.searchParams.set(key, value);
+          changed = true;
+        }
+      });
+      return changed ? u.toString() : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function patchAll() {
+    var links = document.querySelectorAll('a[href]');
+    for (var i = 0; i < links.length; i++) {
+      var next = forward(links[i].getAttribute('href'));
+      if (next) links[i].setAttribute('href', next);
+    }
+  }
+
+  patchAll();
+  document.addEventListener('DOMContentLoaded', patchAll);
+
+  // Last line of defence: rewrite on the way out, so a button rendered after
+  // load still carries the click id.
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    var next = forward(a.getAttribute('href'));
+    if (next) a.setAttribute('href', next);
+  }, true);
+})();
+</script>
