@@ -1,56 +1,38 @@
 <!--
-  Paste this into the Systeme.io landing page (Settings -> Custom code /
-  Tracking code, in the FOOTER or BODY section).
+  ============================================================
+  BEST OPTION: don't use this file.
+  Point the ad straight at https://ffidunban.online
 
-  Why: the Instagram ad puts ?fbclid=... on the landing page URL. That value is
-  what ties a later purchase back to the ad set that paid for it. The landing
-  page button drops it, so every visitor arrives at ffidunban.online anonymous
-  and their conversion cannot be credited to the ad.
+  skillon056.systeme.io/idunban does nothing except redirect
+  there. Removing it keeps fbclid automatically, and drops a
+  hop that costs load time and visitors.
 
-  This copies fbclid (and any utm_* the ad carries) onto every link that points
-  at ffidunban.online, both on load and again at click time so buttons the page
-  builder adds later are covered too.
+  Only keep the systeme.io hop if the ad was approved with
+  that URL and you don't want to re-trigger review.
+  ============================================================
+
+  If you DO keep it, paste this in the page's
+  Settings -> Custom code -> HEADER  (not the footer).
+
+  The footer is too late: systeme.io's own auto-redirect has
+  already fired by then, which is why nothing changed. Running
+  from the header lets us do the redirect first, with the ad's
+  click id still attached.
 -->
 <script>
 (function () {
-  var incoming = new URLSearchParams(window.location.search);
-  if (!incoming.toString()) return;
+  var qs = window.location.search;
+  if (!qs || qs.length < 2) return; // no params — let systeme.io redirect
 
-  function forward(href) {
-    try {
-      var u = new URL(href, window.location.href);
-      if (!/(^|\.)ffidunban\.online$/i.test(u.hostname)) return null;
-      var changed = false;
-      incoming.forEach(function (value, key) {
-        if (!u.searchParams.has(key)) {
-          u.searchParams.set(key, value);
-          changed = true;
-        }
-      });
-      return changed ? u.toString() : null;
-    } catch (e) {
-      return null;
-    }
+  try {
+    var target = new URL("https://ffidunban.online/");
+    new URLSearchParams(qs).forEach(function (value, key) {
+      if (!target.searchParams.has(key)) target.searchParams.set(key, value);
+    });
+    // replace(), not href — the ad click shouldn't leave a back-button trap.
+    window.location.replace(target.toString());
+  } catch (e) {
+    /* leave systeme.io's own redirect to handle it */
   }
-
-  function patchAll() {
-    var links = document.querySelectorAll('a[href]');
-    for (var i = 0; i < links.length; i++) {
-      var next = forward(links[i].getAttribute('href'));
-      if (next) links[i].setAttribute('href', next);
-    }
-  }
-
-  patchAll();
-  document.addEventListener('DOMContentLoaded', patchAll);
-
-  // Last line of defence: rewrite on the way out, so a button rendered after
-  // load still carries the click id.
-  document.addEventListener('click', function (e) {
-    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
-    if (!a) return;
-    var next = forward(a.getAttribute('href'));
-    if (next) a.setAttribute('href', next);
-  }, true);
 })();
 </script>
