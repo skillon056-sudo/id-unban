@@ -46,7 +46,12 @@ export async function sendPurchaseToMeta(e: PurchaseEvent): Promise<boolean> {
   if (e.fbp) userData.fbp = e.fbp;
   if (e.fbc) userData.fbc = e.fbc;
 
+  // Set META_TEST_EVENT_CODE to route events to Events Manager -> Test Events
+  // instead of the live dataset. Leave it unset in normal operation.
+  const testCode = process.env.META_TEST_EVENT_CODE;
+
   const payload = {
+    ...(testCode ? { test_event_code: testCode } : {}),
     data: [
       {
         event_name: "Purchase",
