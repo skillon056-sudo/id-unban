@@ -5,6 +5,7 @@ import { Spinner } from "./Spinner";
 import { OpenInBrowser } from "./OpenInBrowser";
 import { detectInApp } from "@/lib/in-app-browser";
 import { identify, track } from "@/lib/pixel";
+import { rememberCase } from "./ResumeCase";
 
 // Minimal intake: just the email we need to deliver the service and report
 // back. Everything else is collected over email once the case is open.
@@ -67,11 +68,14 @@ export function AppealForm({
       const external = body.redirectUrl.startsWith("http");
       if (external && detectInApp().isInApp) {
         mark("handoff");
+        rememberCase(body.orderId);
         setHandoffUrl(body.redirectUrl);
         setBusy(false);
         return;
       }
       mark("gateway");
+      // The gateway dead-ends; this is how they find their way back.
+      rememberCase(body.orderId);
       setRedirecting(true);
       window.location.href = body.redirectUrl;
     } catch {

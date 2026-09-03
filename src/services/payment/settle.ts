@@ -73,11 +73,15 @@ export async function settlePayment(v: VerifyResult): Promise<SettleOutcome> {
     }
   });
 
-  // Report the conversion from here, the moment the money is confirmed — the
-  // customer usually pays inside their UPI app and never lands back on the
-  // site, so waiting for the browser pixel loses most of them.
+  // Report the conversion the moment the money is confirmed — the customer pays
+  // inside their UPI app and the gateway has no way to send them back, so
+  // waiting for a browser pixel would lose nearly every one.
+  //
+  // Deliberately not awaited: the gateway retries anything it doesn't get a 200
+  // for within 8 seconds, and Meta can take longer than that. A send that fails
+  // or is cut short releases its claim, and the 15-minute sweep retries it.
   if (!isDeposit && v.status === "SUCCESS") {
-    await reportPurchaseOnce(v.orderId);
+    void reportPurchaseOnce(v.orderId).catch(() => {});
   }
 
   return { ok: true, status: v.status };

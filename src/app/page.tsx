@@ -4,6 +4,7 @@ import { Footer } from "@/components/Footer";
 import { SearchExperience } from "@/components/SearchExperience";
 import { Faq } from "@/components/Faq";
 import { SupportVideos } from "@/components/SupportVideos";
+import { ResumeCase } from "@/components/ResumeCase";
 import { buildVideoCards } from "@/lib/youtube";
 import { getSettings } from "@/lib/settings";
 
@@ -35,6 +36,7 @@ export default async function HomePage() {
     <div style={bgStyle(s.img_page_bg, "rgba(255,255,255,0.9)")}>
       <CountdownTimer />
       <Navbar />
+      <ResumeCase />
       <main>
         {/* Top banner */}
         {s.img_banner_top && (
