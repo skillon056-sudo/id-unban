@@ -3,6 +3,8 @@ import { CountdownTimer } from "@/components/CountdownTimer";
 import { Footer } from "@/components/Footer";
 import { SearchExperience } from "@/components/SearchExperience";
 import { Faq } from "@/components/Faq";
+import { SupportVideos } from "@/components/SupportVideos";
+import { buildVideoCards } from "@/lib/youtube";
 import { getSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +29,7 @@ function bgStyle(url?: string, overlay = "rgba(255,255,255,0.82)") {
 
 export default async function HomePage() {
   const s = await getSettings();
+  const videos = await buildVideoCards(s);
 
   return (
     <div style={bgStyle(s.img_page_bg, "rgba(255,255,255,0.9)")}>
@@ -66,6 +69,8 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
+
+        <SupportVideos videos={videos} heading={s.videos_heading || "Support Videos"} />
 
         {/* Middle banner */}
         {s.img_banner_mid && (

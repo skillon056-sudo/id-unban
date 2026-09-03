@@ -47,6 +47,16 @@ export default function SettingsPage() {
           default_price_usd: settings.default_price_usd,
           result_note: settings.result_note,
           fee_note: settings.fee_note,
+          videos_heading: settings.videos_heading,
+          video_1_url: settings.video_1_url,
+          video_1_title: settings.video_1_title,
+          video_1_duration: settings.video_1_duration,
+          video_2_url: settings.video_2_url,
+          video_2_title: settings.video_2_title,
+          video_2_duration: settings.video_2_duration,
+          video_3_url: settings.video_3_url,
+          video_3_title: settings.video_3_title,
+          video_3_duration: settings.video_3_duration,
           deposit_enabled: settings.deposit_enabled,
           deposit_amount: settings.deposit_amount,
           deposit_terms: settings.deposit_terms,
@@ -117,6 +127,43 @@ export default function SettingsPage() {
               <option value="true">On</option>
             </select>
           </Field>
+
+          <div className="mt-2 rounded-xl border border-border p-4">
+            <p className="font-semibold">Support videos (homepage)</p>
+            <p className="mt-1 text-xs text-muted">
+              Paste a YouTube link — the thumbnail and title are fetched automatically.
+              Leave a slot empty to hide that card.
+            </p>
+            <div className="mt-4 space-y-3">
+              <Field label="Section heading">
+                <input className="input" placeholder="Support Videos" value={settings.videos_heading ?? ""} onChange={(e) => set("videos_heading", e.target.value)} />
+              </Field>
+              <div className="rounded-lg border border-border p-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted">Video 1</p>
+                <input className="input mt-2" placeholder="https://youtube.com/watch?v=..." value={settings.video_1_url ?? ""} onChange={(e) => set("video_1_url", e.target.value)} />
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <input className="input" placeholder="Title (blank = auto from YouTube)" value={settings.video_1_title ?? ""} onChange={(e) => set("video_1_title", e.target.value)} />
+                  <input className="input" placeholder="Duration e.g. 01:48" value={settings.video_1_duration ?? ""} onChange={(e) => set("video_1_duration", e.target.value)} />
+                </div>
+              </div>
+              <div className="rounded-lg border border-border p-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted">Video 2</p>
+                <input className="input mt-2" placeholder="https://youtube.com/watch?v=..." value={settings.video_2_url ?? ""} onChange={(e) => set("video_2_url", e.target.value)} />
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <input className="input" placeholder="Title (blank = auto from YouTube)" value={settings.video_2_title ?? ""} onChange={(e) => set("video_2_title", e.target.value)} />
+                  <input className="input" placeholder="Duration e.g. 01:48" value={settings.video_2_duration ?? ""} onChange={(e) => set("video_2_duration", e.target.value)} />
+                </div>
+              </div>
+              <div className="rounded-lg border border-border p-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted">Video 3</p>
+                <input className="input mt-2" placeholder="https://youtube.com/watch?v=..." value={settings.video_3_url ?? ""} onChange={(e) => set("video_3_url", e.target.value)} />
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <input className="input" placeholder="Title (blank = auto from YouTube)" value={settings.video_3_title ?? ""} onChange={(e) => set("video_3_title", e.target.value)} />
+                  <input className="input" placeholder="Duration e.g. 01:48" value={settings.video_3_duration ?? ""} onChange={(e) => set("video_3_duration", e.target.value)} />
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="mt-2 rounded-xl border border-border p-4">
             <p className="font-semibold">Security deposit (step 2)</p>

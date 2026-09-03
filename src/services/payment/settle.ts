@@ -4,6 +4,7 @@
 
 import { prisma } from "@/lib/db";
 import type { VerifyResult } from "./gateway";
+import { reportPurchaseOnce } from "../report-purchase";
 
 export interface SettleOutcome {
   ok: boolean;
@@ -71,6 +72,13 @@ export async function settlePayment(v: VerifyResult): Promise<SettleOutcome> {
       });
     }
   });
+
+  // Report the conversion from here, the moment the money is confirmed — the
+  // customer usually pays inside their UPI app and never lands back on the
+  // site, so waiting for the browser pixel loses most of them.
+  if (!isDeposit && v.status === "SUCCESS") {
+    await reportPurchaseOnce(v.orderId);
+  }
 
   return { ok: true, status: v.status };
 }

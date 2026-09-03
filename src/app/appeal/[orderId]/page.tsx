@@ -7,7 +7,7 @@ import { Footer } from "@/components/Footer";
 import { Spinner } from "@/components/Spinner";
 import { StatusBadge } from "@/components/StatusBadge";
 import { GARENA_APPEAL_URL } from "@/lib/links";
-import { identify, track } from "@/lib/pixel";
+import { identify, trackOnce } from "@/lib/pixel";
 
 interface CaseInfo {
   orderId: string;
@@ -76,17 +76,15 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
             if (claim.claimed) {
               identify(body.contactEmail);
               // Value and currency come from the verified payment record.
-              track(
-                "Purchase",
-                {
-                  value: claim.value,
-                  currency: claim.currency,
-                  content_type: "product",
-                  content_ids: [body.gameId],
-                  contents: [{ id: body.gameId, quantity: 1, item_price: claim.value }],
-                },
-                claim.eventId,
-              );
+              // trackOnce keys on the order id, so a refresh can't double-fire;
+              // the server sends the same event_id and Meta merges the two.
+              trackOnce(claim.eventId, "Purchase", {
+                value: claim.value,
+                currency: claim.currency,
+                content_type: "product",
+                content_ids: [body.gameId],
+                contents: [{ id: body.gameId, quantity: 1, item_price: claim.value }],
+              });
               if (process.env.NODE_ENV !== "production") {
                 console.log("[pixel] Purchase fired", claim);
               }
