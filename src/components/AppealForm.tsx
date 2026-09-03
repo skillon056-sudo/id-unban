@@ -54,13 +54,24 @@ export function AppealForm({
         body.orderId,
       );
 
+      // Leave a mark in the access log for which way this checkout went, so a
+      // drop in payments can be told apart: people stuck on the hand-off screen
+      // versus people who reached the gateway and didn't pay. keepalive lets it
+      // survive the navigation that follows.
+      const mark = (event: string) =>
+        fetch(`/api/appeal/${encodeURIComponent(body.orderId)}?event=${event}`, {
+          keepalive: true,
+        }).catch(() => {});
+
       // Relative URLs are our own pages and work fine in any browser.
       const external = body.redirectUrl.startsWith("http");
       if (external && detectInApp().isInApp) {
+        mark("handoff");
         setHandoffUrl(body.redirectUrl);
         setBusy(false);
         return;
       }
+      mark("gateway");
       setRedirecting(true);
       window.location.href = body.redirectUrl;
     } catch {
