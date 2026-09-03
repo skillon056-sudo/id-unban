@@ -9,6 +9,19 @@ import { readCookie } from "@/lib/cookies";
 
 export const dynamic = "force-dynamic";
 
+// How long an unpaid case may be handed the checkout it already has.
+//
+// Sunpay ties one checkout to one order_id: re-creating with the same id
+// returns {"idempotent": true} and the ORIGINAL transaction. That checkout
+// expires after about five minutes, so a window anywhere near it hands the
+// customer back a dead payment page — which is exactly what happened to anyone
+// who took a minute to get through the in-app-browser hand-off and clicked pay
+// again in Chrome.
+//
+// Must stay well under the gateway's expiry. Reuse only exists to swallow
+// double-clicks; a minute is plenty for that.
+const REUSE_MS = 60 * 1000;
+
 // Opens a paid appeal-assistance case and returns the checkout URL.
 //
 // Latency matters here — the user is staring at a spinner. Each round trip to
@@ -60,7 +73,7 @@ export async function POST(req: Request) {
         gameId,
         contactEmail,
         status: "PENDING",
-        createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) },
+        createdAt: { gte: new Date(Date.now() - REUSE_MS) },
       },
       orderBy: { createdAt: "desc" },
       select: { orderId: true },
