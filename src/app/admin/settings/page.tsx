@@ -60,6 +60,7 @@ export default function SettingsPage() {
           deposit_enabled: settings.deposit_enabled,
           deposit_amount: settings.deposit_amount,
           deposit_terms: settings.deposit_terms,
+          deposit_terms_en: settings.deposit_terms_en,
           cta_label: settings.cta_label,
           service_fee: settings.service_fee,
           service_fee_before: settings.service_fee_before,
@@ -184,13 +185,22 @@ export default function SettingsPage() {
                   <input className="input" inputMode="numeric" value={settings.deposit_amount ?? ""} onChange={(e) => set("deposit_amount", e.target.value.replace(/[^0-9]/g, ""))} />
                 </Field>
               </div>
-              <Field label="Deposit & refund terms (required before the step goes live)">
+              <Field label="Deposit & refund terms — Hinglish (shown by default; required before the step goes live)">
                 <textarea
                   rows={7}
                   className="input"
                   placeholder="Why it is required · who qualifies for a refund · how long it takes · how it is sent · any deductions"
                   value={settings.deposit_terms ?? ""}
                   onChange={(e) => set("deposit_terms", e.target.value)}
+                />
+              </Field>
+              <Field label="Deposit & refund terms — English (optional; adds a small translate toggle)">
+                <textarea
+                  rows={7}
+                  className="input"
+                  placeholder="The same terms in English. Leave empty and no toggle is shown."
+                  value={settings.deposit_terms_en ?? ""}
+                  onChange={(e) => set("deposit_terms_en", e.target.value)}
                 />
               </Field>
             </div>

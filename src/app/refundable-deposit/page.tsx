@@ -5,6 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { DepositForm } from "@/components/DepositForm";
 import { AccountQuestions } from "@/components/AccountQuestions";
+import { TermsBlock } from "@/components/TermsBlock";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ export default async function DepositPage({
   const amount = Math.round(Number(settings.deposit_amount || 2000));
   const currency = settings.currency || "INR";
   const terms = settings.deposit_terms || "";
+  const termsEn = settings.deposit_terms_en || "";
   const support = settings.support_contact || "";
 
   // Already paid? Send them to the case page instead of charging twice.
@@ -78,19 +80,7 @@ export default async function DepositPage({
 
               {/* Operator-written policy. Nothing here is invented by the app. */}
               {terms ? (
-                <div className="mt-5 rounded-xl border border-border bg-slate-100 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-muted">
-                    Deposit &amp; refund terms
-                  </p>
-                  <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-slate-700">
-                    {terms}
-                  </p>
-                  {support && (
-                    <p className="mt-3 text-xs text-muted">
-                      Questions? Contact <span className="font-semibold text-ink">{support}</span>
-                    </p>
-                  )}
-                </div>
+                <TermsBlock primary={terms} alternate={termsEn} support={support} />
               ) : (
                 <div className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-800">
                   Refund terms have not been published yet. Please contact support

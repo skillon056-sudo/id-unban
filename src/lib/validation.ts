@@ -84,6 +84,7 @@ export const settingsSchema = z.object({
   result_note: z.string().trim().max(500).optional(),
   deposit_enabled: z.enum(["true", "false"]).optional(),
   deposit_terms: z.string().trim().max(4000).optional(),
+  deposit_terms_en: z.string().trim().max(4000).optional(),
   fee_note: z.string().trim().max(600).optional(),
   site_logo: z.string().trim().max(500).optional(),
   videos_heading: z.string().trim().max(60).optional(),
