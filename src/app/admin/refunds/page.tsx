@@ -204,6 +204,8 @@ function RefundDrawer({
           {row.requestedAt && <Line label="Held since" value={formatDate(row.requestedAt)} />}
         </div>
 
+        {row.depositStatus !== "SUCCESS" && <MarkPaid orderId={row.orderId} onDone={onSaved} />}
+
         <div className="mt-4">
           <label className="label" htmlFor="r-status">Refund status</label>
           <select
@@ -263,6 +265,82 @@ function Line({ label, value }: { label: string; value: string }) {
     <div className="flex justify-between gap-4">
       <span className="text-muted">{label}</span>
       <span className="break-all text-right font-medium text-ink">{value}</span>
+    </div>
+  );
+}
+
+// The gateway takes the money before it knows the order is paid: the customer
+// transfers to a UPI handle, then has to return and paste the reference within
+// a few minutes. When they don't, no webhook ever arrives and the deposit sits
+// PENDING even though the money moved — which also blocks the refund.
+//
+// Recording it here is an assertion, not a check: confirm it in the gateway
+// dashboard first. It runs through the same settlement a webhook would.
+function MarkPaid({ orderId, onDone }: { orderId: string; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [reference, setReference] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/payments/${orderId}/settle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference, note }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Could not record it.");
+      onDone();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not record it.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="mt-4 w-full rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
+      >
+        Deposit paid but never confirmed? Record it manually
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
+      <p className="text-sm font-semibold text-amber-900">Record this deposit as paid</p>
+      <p className="mt-1 text-xs text-amber-800">
+        Only after you have confirmed the money in the gateway dashboard or bank
+        statement. This opens the refund and cannot be undone from here.
+      </p>
+      {error && <p className="mt-2 text-xs font-medium text-red-700">{error}</p>}
+      <input
+        className="input mt-3"
+        placeholder="UTR / reference from the gateway"
+        value={reference}
+        onChange={(e) => setReference(e.target.value)}
+      />
+      <input
+        className="input mt-2"
+        placeholder="Note (optional) — how you confirmed it"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+      />
+      <div className="mt-3 flex gap-2">
+        <button onClick={submit} disabled={busy || reference.trim().length < 6} className="btn-primary flex-1 text-sm">
+          {busy ? <Spinner className="h-4 w-4" /> : "Record as paid"}
+        </button>
+        <button onClick={() => setOpen(false)} disabled={busy} className="btn-ghost text-sm">
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }
