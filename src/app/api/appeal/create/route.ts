@@ -80,6 +80,13 @@ export async function POST(req: Request) {
     }),
   ]);
 
+  // Already paid once with this email? Don't sell them the same thing twice —
+  // send them back to whatever step they actually left unfinished.
+  if (settings.service_free !== "true") {
+    const resume = await resumeFor(contactEmail, settings.deposit_enabled === "true");
+    if (resume) return NextResponse.json(resume);
+  }
+
   const isFree = settings.service_free === "true";
   const fee = isFree ? 0 : Math.round(Number(settings.service_fee || 0));
   const currency = settings.currency || "INR";
@@ -171,4 +178,54 @@ function fbc(req: Request, fbclid?: string): string | null {
   const stored = readCookie(req, "_fbc");
   if (stored) return stored;
   return fbclid ? `fb.1.${Date.now()}.${fbclid}` : null;
+}
+
+/**
+ * Where a returning customer belongs. Settlement moves a paid case out of
+ * PENDING, so those states are what "they already paid" looks like — but the
+ * payment row is still checked, because a free case reaches them too and has no
+ * payment behind it.
+ *
+ * Returns null for anyone who hasn't paid, who then goes through checkout
+ * normally.
+ */
+async function resumeFor(contactEmail: string, depositEnabled: boolean) {
+  const cases = await prisma.unbanRequest.findMany({
+    where: { contactEmail, status: { in: ["IN_PROGRESS", "FILED", "CLOSED"] } },
+    orderBy: { createdAt: "desc" },
+    select: { orderId: true },
+    take: 10,
+  });
+  if (cases.length === 0) return null;
+
+  const paid = await prisma.payment.findFirst({
+    where: {
+      orderId: { in: cases.map((c) => c.orderId) },
+      kind: "SERVICE",
+      status: "SUCCESS",
+      amount: { gt: 0 },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { orderId: true },
+  });
+  if (!paid) return null;
+
+  if (depositEnabled) {
+    const depositDone = await prisma.payment.findFirst({
+      where: { parentOrderId: paid.orderId, kind: "DEPOSIT", status: "SUCCESS" },
+      select: { orderId: true },
+    });
+    if (!depositDone) {
+      return {
+        orderId: paid.orderId,
+        redirectUrl: `/refundable-deposit?order=${encodeURIComponent(paid.orderId)}`,
+        resumed: true,
+      };
+    }
+  }
+  return {
+    orderId: paid.orderId,
+    redirectUrl: `/appeal/${encodeURIComponent(paid.orderId)}`,
+    resumed: true,
+  };
 }

@@ -47,8 +47,17 @@ export function AppealForm({
         setBusy(false);
         return;
       }
-      // Checkout started — attribute it to this customer.
       identify(email);
+
+      // A returning customer being sent back to an unfinished step isn't
+      // starting a checkout — reporting one would inflate the funnel.
+      if (body.resumed) {
+        setRedirecting(true);
+        window.location.href = body.redirectUrl;
+        return;
+      }
+
+      // Checkout started — attribute it to this customer.
       track(
         "InitiateCheckout",
         {

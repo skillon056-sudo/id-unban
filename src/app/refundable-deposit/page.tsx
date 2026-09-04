@@ -4,6 +4,7 @@ import { getSettings } from "@/lib/settings";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { DepositForm } from "@/components/DepositForm";
+import { AccountQuestions } from "@/components/AccountQuestions";
 
 export const dynamic = "force-dynamic";
 
@@ -97,11 +98,13 @@ export default async function DepositPage({
                 </div>
               )}
 
-              <DepositForm
-                orderId={orderId}
-                amount={amount}
-                termsPublished={Boolean(terms)}
-              />
+              <AccountQuestions orderId={orderId}>
+                <DepositForm
+                  orderId={orderId}
+                  amount={amount}
+                  termsPublished={Boolean(terms)}
+                />
+              </AccountQuestions>
             </div>
           </div>
         </div>
