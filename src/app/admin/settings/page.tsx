@@ -62,6 +62,7 @@ export default function SettingsPage() {
           deposit_terms: settings.deposit_terms,
           cta_label: settings.cta_label,
           service_fee: settings.service_fee,
+          service_fee_before: settings.service_fee_before,
           service_free: settings.service_free,
         }),
       });
@@ -221,6 +222,16 @@ export default function SettingsPage() {
                 />
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Was price (₹) — struck through, leave empty for no discount">
+                  <input
+                    className="input"
+                    inputMode="decimal"
+                    placeholder="e.g. 1000"
+                    disabled={settings.service_free === "true"}
+                    value={settings.service_fee_before ?? ""}
+                    onChange={(e) => set("service_fee_before", e.target.value.replace(/[^\d.]/g, ""))}
+                  />
+                </Field>
                 <Field label="Service fee (₹)">
                   <input
                     className="input"

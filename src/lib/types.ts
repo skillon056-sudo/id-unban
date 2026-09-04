@@ -46,4 +46,6 @@ export interface PublicIdResult {
   ctaLabel: string;
   /** Fee shown for banned IDs; null when the operator marked it free. */
   fee: number | null;
+  /** Struck-through price the fee is discounted from. Null when not on offer. */
+  feeBefore: number | null;
 }

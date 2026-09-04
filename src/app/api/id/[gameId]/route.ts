@@ -55,6 +55,10 @@ export async function GET(
   // "free" toggle wins; otherwise show the configured fee.
   const fee =
     settings.service_free === "true" ? null : Number(settings.service_fee || 0) || null;
+  // Only a real reduction is shown as one — a "before" price at or below what
+  // we actually charge is not a discount, so it is simply dropped.
+  const before = Number(settings.service_fee_before || 0) || null;
+  const feeBefore = fee != null && before != null && before > fee ? before : null;
   const username = profile?.nickname ?? id?.username ?? null;
 
   // Editable in Settings; blank falls back to the default so the paid flow
@@ -80,6 +84,7 @@ export async function GET(
       feeNote,
       ctaLabel,
       fee,
+      feeBefore,
     });
   }
 
@@ -101,6 +106,7 @@ export async function GET(
       feeNote,
       ctaLabel,
       fee,
+      feeBefore,
     });
   }
 
@@ -120,6 +126,7 @@ export async function GET(
       feeNote,
       ctaLabel,
       fee,
+      feeBefore,
     });
   }
 

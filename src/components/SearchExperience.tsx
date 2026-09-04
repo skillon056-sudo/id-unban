@@ -147,7 +147,24 @@ function ResultCard({
           <Row label="Unbans Remaining" value={String(data.unbanLeft)} />
         )}
         {data.requestEnabled && (
-          <Row label="Service Fee" value={data.fee == null ? "Free" : `₹${data.fee}`} />
+          <div className="flex items-start justify-between gap-4 border-b border-border/60 pb-3">
+            <span className="text-muted">Service Fee</span>
+            {data.fee == null ? (
+              <span className="text-right font-medium text-ink">Free</span>
+            ) : (
+              <span className="flex flex-wrap items-center justify-end gap-2 text-right">
+                {data.feeBefore != null && (
+                  <>
+                    <span className="text-muted line-through">₹{data.feeBefore}</span>
+                    <span className="rounded bg-red-600 px-1.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-white">
+                      {percentOff(data.feeBefore, data.fee)}% off
+                    </span>
+                  </>
+                )}
+                <span className="font-bold text-ink">₹{data.fee}</span>
+              </span>
+            )}
+          </div>
         )}
 
         {data.status === "UNBANNED" && (
@@ -191,6 +208,11 @@ function Stat({ label, value }: { label: string; value: string }) {
       <p className="truncate font-display text-base font-bold text-ink">{value}</p>
     </div>
   );
+}
+
+// Rounded down, so the badge never claims a bigger cut than the prices show.
+function percentOff(before: number, now: number) {
+  return Math.floor(((before - now) / before) * 100);
 }
 
 function Row({ label, value }: { label: string; value: string }) {

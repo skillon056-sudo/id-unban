@@ -99,6 +99,7 @@ export const settingsSchema = z.object({
   cta_label: z.string().trim().max(40).optional(),
   service_free: z.enum(["true", "false"]).optional(),
   service_fee: z.string().regex(/^\d+(\.\d+)?$/).optional(),
+  service_fee_before: z.string().regex(/^\d*(\.\d+)?$/).optional(),
   default_price_usd: z.string().regex(/^\d+(\.\d+)?$/).optional(),
   // Background-image slots — a local /uploads path or a full URL, or "" to clear.
   img_page_bg: z.string().trim().max(500).optional(),
