@@ -29,6 +29,25 @@ export function AppealForm({
     e.preventDefault();
     setBusy(true);
     setError(null);
+
+    // Claim a tab now, while the click is still a trusted gesture — after the
+    // await below a browser would treat window.open as a popup and block it.
+    // Null means it was blocked anyway, and we fall back to this tab.
+    let payTab: Window | null = null;
+    try {
+      payTab = window.open("", "_blank");
+    } catch {
+      payTab = null;
+    }
+    const dropTab = () => {
+      try {
+        payTab?.close();
+      } catch {
+        /* nothing to do */
+      }
+      payTab = null;
+    };
+
     try {
       const res = await fetch("/api/appeal/create", {
         method: "POST",
@@ -43,6 +62,7 @@ export function AppealForm({
       });
       const body = await res.json();
       if (!res.ok || !body.redirectUrl) {
+        dropTab();
         setError(body.error || "Could not continue. Please try again.");
         setBusy(false);
         return;
@@ -52,6 +72,7 @@ export function AppealForm({
       // A returning customer being sent back to an unfinished step isn't
       // starting a checkout — reporting one would inflate the funnel.
       if (body.resumed) {
+        dropTab(); // an internal page, no gateway involved
         setRedirecting(true);
         window.location.href = body.redirectUrl;
         return;
@@ -82,6 +103,7 @@ export function AppealForm({
       // Relative URLs are our own pages and work fine in any browser.
       const external = body.redirectUrl.startsWith("http");
       if (external && detectInApp().isInApp) {
+        dropTab(); // the hand-off screen drives the browser itself
         mark("handoff");
         rememberCase(body.orderId);
         setHandoffUrl(body.redirectUrl);
@@ -89,11 +111,23 @@ export function AppealForm({
         return;
       }
       mark("gateway");
-      // The gateway dead-ends; this is how they find their way back.
       rememberCase(body.orderId);
       setRedirecting(true);
+
+      // The gateway's checkout ends on its own success screen — it has no way
+      // to send anyone back to us. So send it to its own tab and keep this one
+      // alive on the case page, where it polls and moves itself on to the next
+      // step the moment the payment settles. Closing the payment tab then lands
+      // the customer on a page that has already advanced.
+      if (payTab) {
+        payTab.location.href = body.redirectUrl;
+        window.location.href = `/appeal/${encodeURIComponent(body.orderId)}`;
+        return;
+      }
+      // Popup blocked — behave exactly as before rather than stranding anyone.
       window.location.href = body.redirectUrl;
     } catch {
+      dropTab();
       setError("Network error. Please try again.");
       setBusy(false);
     }

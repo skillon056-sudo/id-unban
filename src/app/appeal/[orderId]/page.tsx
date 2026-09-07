@@ -53,6 +53,13 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
     let active = true;
     let tries = 0;
 
+    // Tight at first so a fast payment is picked up almost immediately, then
+    // easing off — about ten minutes of watching in total.
+    function schedule() {
+      if (!active || ++tries > 140) return;
+      setTimeout(poll, tries < 20 ? 3000 : 6000);
+    }
+
     async function poll() {
       try {
         const res = await fetch(`/api/appeal/${encodeURIComponent(params.orderId)}`);
@@ -101,10 +108,13 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
           }
         }
 
-        // Keep polling briefly while a payment is still settling.
-        if (body.paymentStatus !== "SUCCESS" && ++tries < 40) setTimeout(poll, 3000);
+        // Keep watching while the payment is still in flight. This page is
+        // usually left open in the tab behind the gateway's own, so it has to
+        // outlast the checkout — which gives the customer several minutes to
+        // pay — not just the first few seconds.
+        if (body.paymentStatus !== "SUCCESS") schedule();
       } catch {
-        if (active && ++tries < 40) setTimeout(poll, 3000);
+        if (active) schedule();
       }
     }
     poll();
