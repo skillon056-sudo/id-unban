@@ -65,9 +65,6 @@ export default async function HomePage() {
 
             <div className="mx-auto mt-10 max-w-2xl">
               <SearchExperience />
-              <p className="mt-3 text-center text-xs text-muted">
-                Try a demo ID: <code className="text-slate-600">100000001</code>
-              </p>
             </div>
           </div>
         </section>
