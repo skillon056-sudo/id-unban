@@ -27,9 +27,10 @@ export function Footer({ bgImage }: { bgImage?: string }) {
           {"\n"}
           {footerNote.trim() || FALLBACK_NOTE}
         </p>
+        {/* No admin link: the sign-in page is reachable at /admin/login directly,
+            it just isn't advertised to visitors. */}
         <div className="flex shrink-0 gap-4">
           <Link href="/#faq" className="hover:text-slate-700">FAQ</Link>
-          <Link href="/admin/login" className="hover:text-slate-700">Admin</Link>
         </div>
       </div>
     </footer>
