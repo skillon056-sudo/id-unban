@@ -38,6 +38,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const branding = {
     logo: s.site_logo || "",
     siteName: s.site_name || siteName,
+    footerNote: s.footer_note || "",
   };
 
   return (

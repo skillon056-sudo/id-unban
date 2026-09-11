@@ -39,6 +39,7 @@ export default function SettingsPage() {
           currency: settings.currency,
           usd_rate: settings.usd_rate,
           support_contact: settings.support_contact,
+          footer_note: settings.footer_note,
           maintenance_mode: settings.maintenance_mode,
           default_status: settings.default_status,
           payment_enabled: settings.payment_enabled,
@@ -109,6 +110,15 @@ export default function SettingsPage() {
           </Field>
           <Field label="Support contact">
             <input className="input" value={settings.support_contact ?? ""} onChange={(e) => set("support_contact", e.target.value)} />
+          </Field>
+          <Field label="Footer text (under the © line — business name, contact, address; line breaks kept)">
+            <textarea
+              rows={4}
+              className="input"
+              placeholder="Independent support service. Not affiliated with or endorsed by Garena or Free Fire."
+              value={settings.footer_note ?? ""}
+              onChange={(e) => set("footer_note", e.target.value)}
+            />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Default status for new IDs">

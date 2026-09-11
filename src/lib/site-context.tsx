@@ -7,9 +7,15 @@ import { createContext, useContext } from "react";
 export interface SiteBranding {
   logo: string; // "" = fall back to the built-in badge
   siteName: string;
+  /** Operator-written footer line. Empty falls back to the built-in text. */
+  footerNote: string;
 }
 
-const SiteContext = createContext<SiteBranding>({ logo: "", siteName: "" });
+const SiteContext = createContext<SiteBranding>({
+  logo: "",
+  siteName: "",
+  footerNote: "",
+});
 
 export function SiteProvider({
   value,
