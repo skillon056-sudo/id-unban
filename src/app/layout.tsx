@@ -7,6 +7,7 @@ import { MetaPixel } from "@/components/MetaPixel";
 
 const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "FF ID Recovery";
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+const checkoutOrigin = process.env.SUNPAY_CHECKOUT_ORIGIN || "";
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
@@ -45,9 +46,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <head>
         {/* Gateway checkout lives on another host — warm DNS+TLS now so the
-            post-click redirect isn't paying for a cold handshake. */}
-        <link rel="preconnect" href="https://cashier.sunpaytm.quest" />
-        <link rel="dns-prefetch" href="https://cashier.sunpaytm.quest" />
+            post-click redirect isn't paying for a cold handshake. Read from env
+            because the gateway has changed domains before. */}
+        {checkoutOrigin && (
+          <>
+            <link rel="preconnect" href={checkoutOrigin} />
+            <link rel="dns-prefetch" href={checkoutOrigin} />
+          </>
+        )}
       </head>
       <body>
         <MetaPixel />
