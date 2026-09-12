@@ -1,6 +1,13 @@
 @import url("https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&display=swap");
 
 @tailwind base;
+
+/* Bump to force a new stylesheet URL. Stylesheets are cached as immutable under
+   a content hash, so a copy a browser broke during a deploy is never re-fetched
+   while the CSS itself stays unchanged. */
+:root {
+  --asset-rev: 2;
+}
 @tailwind components;
 @tailwind utilities;
 
