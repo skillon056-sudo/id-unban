@@ -114,7 +114,9 @@ export class SunpayGateway implements PaymentGateway {
     const txn = raw?.transaction || {};
 
     const orderId = raw.order_id || data.order_id || txn.order_id;
-    if (!orderId) throw new Error("Webhook missing order_id");
+    // Signature already checked, so this is a real gateway message we can't
+    // place — keep its body so the shape can be read and handled.
+    if (!orderId) throw new Error(`Webhook missing order_id raw=${rawBody.slice(0, 1500)}`);
 
     const amountRaw = data.amount ?? raw.amount ?? txn.amount;
     const amount = amountRaw != null ? Number(amountRaw) : undefined;
