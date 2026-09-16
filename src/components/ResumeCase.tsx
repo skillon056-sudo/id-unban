@@ -92,7 +92,9 @@ export function ResumeCase() {
           /* storage blocked — the banner button still gets them there */
         }
         if (!sent) {
-          window.location.href = `/refundable-deposit?order=${encodeURIComponent(c.orderId)}`;
+          // The case page holds the wait before the deposit step and moves on
+          // to it when it opens.
+          window.location.href = `/appeal/${encodeURIComponent(c.orderId)}`;
         }
       }
     })();
@@ -107,9 +109,7 @@ export function ResumeCase() {
     setInfo(null);
   }
 
-  const href = info.depositNext
-    ? `/refundable-deposit?order=${encodeURIComponent(info.orderId)}`
-    : `/appeal/${info.orderId}`;
+  const href = `/appeal/${encodeURIComponent(info.orderId)}`;
 
   return (
     <div className={info.paid ? "border-b border-emerald-200 bg-emerald-50" : "border-b border-accent/40 bg-accent/10"}>

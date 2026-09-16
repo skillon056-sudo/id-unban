@@ -20,6 +20,8 @@ interface CaseInfo {
   contactEmail: string | null;
   filedAt: string | null;
   createdAt: string;
+  /** When the deposit step opens, if one is still owed. */
+  depositAt: string | null;
 }
 
 const STEP_TEXT: Record<string, { title: string; body: string }> = {
@@ -48,6 +50,28 @@ const STEP_TEXT: Record<string, { title: string; body: string }> = {
 export default function AppealCasePage({ params }: { params: { orderId: string } }) {
   const [info, setInfo] = useState<CaseInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  // Count down to the deposit step, then move on to it. The server holds the
+  // same deadline, so this only decides when to navigate — it can't open early.
+  const depositAt = info?.depositAt ? new Date(info.depositAt).getTime() : null;
+  useEffect(() => {
+    if (depositAt == null) return;
+    const go = () =>
+      (window.location.href = `/refundable-deposit?order=${encodeURIComponent(params.orderId)}`);
+    if (Date.now() >= depositAt) {
+      go();
+      return;
+    }
+    const tick = setInterval(() => {
+      setNow(Date.now());
+      if (Date.now() >= depositAt) {
+        clearInterval(tick);
+        go();
+      }
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [depositAt, params.orderId]);
 
   useEffect(() => {
     let active = true;
@@ -101,11 +125,8 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
           }
 
           // Purchase has been handled (sent, or already reported by another
-          // tab). Continue to the deposit step if it's enabled.
-          if (body.depositNext) {
-            window.location.href = `/refundable-deposit?order=${encodeURIComponent(params.orderId)}`;
-            return;
-          }
+          // tab). The deposit step, if owed, opens on the countdown above.
+          if (body.depositNext) return;
         }
 
         // Keep watching while the payment is still in flight. This page is
@@ -157,6 +178,20 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
               </div>
 
               <div className="px-8 pb-8">
+                {depositAt != null && depositAt > now && (
+                  <div className="mb-5 rounded-xl border border-accent/50 bg-accent/10 p-4 text-center">
+                    <p className="text-xs font-bold uppercase tracking-wide text-muted">
+                      Next step opens in
+                    </p>
+                    <p className="mt-1 font-display text-3xl font-extrabold tabular-nums text-ink">
+                      {mmss(depositAt - now)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted">
+                      Keep this page open — it moves on by itself.
+                    </p>
+                  </div>
+                )}
+
                 <div className="grid gap-3 text-sm">
                   <Row label="Free Fire ID" value={info.gameId} />
                   <Row label="Case reference" value={info.orderId} />
@@ -207,4 +242,9 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="text-right font-medium text-ink">{value}</span>
     </div>
   );
+}
+
+function mmss(ms: number) {
+  const t = Math.max(0, Math.ceil(ms / 1000));
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
 }

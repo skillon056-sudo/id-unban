@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { getGateway } from "@/services/payment";
 import { settlePayment } from "@/services/payment/settle";
+import { depositOpensAt } from "@/lib/deposit";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export async function GET(
 
   const fresh = await prisma.payment.findUnique({
     where: { orderId },
-    select: { status: true, transactionId: true },
+    select: { status: true, transactionId: true, updatedAt: true },
   });
 
   // Is there a deposit step still to do for this order?
@@ -52,6 +53,8 @@ export async function GET(
   return NextResponse.json({
     ...c,
     depositNext,
+    // Settlement is the payment's last write, so updatedAt is when it cleared.
+    depositAt: depositNext && fresh ? depositOpensAt(fresh.updatedAt).toISOString() : null,
     paymentStatus: fresh?.status ?? (c.amount === 0 ? "FREE" : "UNKNOWN"),
     transactionId: fresh?.transactionId ?? null,
   });

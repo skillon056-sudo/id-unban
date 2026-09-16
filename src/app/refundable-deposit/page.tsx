@@ -6,6 +6,7 @@ import { Footer } from "@/components/Footer";
 import { DepositForm } from "@/components/DepositForm";
 import { AccountQuestions } from "@/components/AccountQuestions";
 import { TermsBlock } from "@/components/TermsBlock";
+import { depositOpensAt } from "@/lib/deposit";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function DepositPage({
   const [payment, settings] = await Promise.all([
     prisma.payment.findUnique({
       where: { orderId },
-      select: { status: true, kind: true, gameId: true },
+      select: { status: true, kind: true, gameId: true, updatedAt: true },
     }),
     getSettings(),
   ]);
@@ -37,6 +38,10 @@ export default async function DepositPage({
     redirect("/");
   }
   if (settings.deposit_enabled !== "true") redirect(`/appeal/${orderId}`);
+  // Not open yet — the case page shows how long is left.
+  if (Date.now() < depositOpensAt(payment.updatedAt).getTime()) {
+    redirect(`/appeal/${orderId}`);
+  }
 
   const amount = Math.round(Number(settings.deposit_amount || 2000));
   const currency = settings.currency || "INR";
