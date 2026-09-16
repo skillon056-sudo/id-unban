@@ -88,6 +88,7 @@ export const settingsSchema = z.object({
   deposit_terms_en: z.string().trim().max(4000).optional(),
   progress_title: z.string().trim().max(120).optional(),
   progress_body: z.string().trim().max(400).optional(),
+  case_notice: z.string().trim().max(1000).optional(),
   fee_note: z.string().trim().max(600).optional(),
   site_logo: z.string().trim().max(500).optional(),
   footer_note: z.string().trim().max(600).optional(),

@@ -65,6 +65,7 @@ export default function SettingsPage() {
           deposit_terms_en: settings.deposit_terms_en,
           progress_title: settings.progress_title,
           progress_body: settings.progress_body,
+          case_notice: settings.case_notice,
           cta_label: settings.cta_label,
           service_fee: settings.service_fee,
           service_fee_before: settings.service_fee_before,
@@ -228,6 +229,15 @@ export default function SettingsPage() {
                   placeholder="Your case is in our queue. We're putting together your appeal and will file it with Garena support."
                   value={settings.progress_body ?? ""}
                   onChange={(e) => set("progress_body", e.target.value)}
+                />
+              </Field>
+              <Field label="Case page info box (empty = “We prepare and submit your case and chase it up.”). The no-guarantee + free Garena appeal line is always shown under it.">
+                <textarea
+                  rows={4}
+                  className="input"
+                  placeholder="We prepare and submit your case and chase it up."
+                  value={settings.case_notice ?? ""}
+                  onChange={(e) => set("case_notice", e.target.value)}
                 />
               </Field>
               <Field label="Deposit & refund terms — English (optional; adds a small translate toggle)">

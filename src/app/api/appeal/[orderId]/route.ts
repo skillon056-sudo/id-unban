@@ -58,6 +58,7 @@ export async function GET(
     // Operator-written heading and line for a paid case; empty = built-in text.
     progressTitle: settings.progress_title || null,
     progressBody: settings.progress_body || null,
+    caseNotice: settings.case_notice || null,
     paymentStatus: fresh?.status ?? (c.amount === 0 ? "FREE" : "UNKNOWN"),
     transactionId: fresh?.transactionId ?? null,
   });
