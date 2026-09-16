@@ -218,26 +218,25 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
                 </div>
 
                 <div className="mt-6 rounded-xl bg-slate-100 p-4 text-xs leading-relaxed text-slate-600">
-                  {/* Operator-written, editable in Settings. */}
-                  <p className="whitespace-pre-line">
-                    {info.caseNotice || "We prepare and submit your case and chase it up."}
-                  </p>
-                  {/* Always shown, whatever the text above says: the customer
-                      reads this before being asked for anything further. */}
-                  <p className="mt-2">
-                    Garena decides every ban appeal, so we can&apos;t unban an
-                    account or guarantee a result. You can also appeal yourself,
-                    free, at{" "}
-                    <a
-                      href={GARENA_APPEAL_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold text-ink underline"
-                    >
-                      Garena support
-                    </a>
-                    .
-                  </p>
+                  {info.caseNotice ? (
+                    // Operator-written in Settings; replaces the whole box.
+                    <p className="whitespace-pre-line">{info.caseNotice}</p>
+                  ) : (
+                    <p>
+                      Garena decides every ban appeal. We prepare and submit your case
+                      and chase it up — we can&apos;t unban an account or guarantee a
+                      result. You can also appeal yourself, free, at{" "}
+                      <a
+                        href={GARENA_APPEAL_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-ink underline"
+                      >
+                        Garena support
+                      </a>
+                      .
+                    </p>
+                  )}
                 </div>
 
                 <p className="mt-4 text-center text-xs text-muted">

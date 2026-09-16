@@ -231,11 +231,11 @@ export default function SettingsPage() {
                   onChange={(e) => set("progress_body", e.target.value)}
                 />
               </Field>
-              <Field label="Case page info box (empty = “We prepare and submit your case and chase it up.”). The no-guarantee + free Garena appeal line is always shown under it.">
+              <Field label="Case page info box (replaces the whole box; empty = the built-in no-guarantee / free Garena appeal text)">
                 <textarea
                   rows={4}
                   className="input"
-                  placeholder="We prepare and submit your case and chase it up."
+                  placeholder="Garena decides every ban appeal. We prepare and submit your case and chase it up…"
                   value={settings.case_notice ?? ""}
                   onChange={(e) => set("case_notice", e.target.value)}
                 />
