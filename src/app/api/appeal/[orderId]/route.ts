@@ -55,6 +55,9 @@ export async function GET(
     depositNext,
     // Settlement is the payment's last write, so updatedAt is when it cleared.
     depositAt: depositNext && fresh ? depositOpensAt(fresh.updatedAt).toISOString() : null,
+    // Operator-written heading and line for a paid case; empty = built-in text.
+    progressTitle: settings.progress_title || null,
+    progressBody: settings.progress_body || null,
     paymentStatus: fresh?.status ?? (c.amount === 0 ? "FREE" : "UNKNOWN"),
     transactionId: fresh?.transactionId ?? null,
   });

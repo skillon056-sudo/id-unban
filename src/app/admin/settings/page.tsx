@@ -62,6 +62,8 @@ export default function SettingsPage() {
           deposit_amount: settings.deposit_amount,
           deposit_terms: settings.deposit_terms,
           deposit_terms_en: settings.deposit_terms_en,
+          progress_title: settings.progress_title,
+          progress_body: settings.progress_body,
           cta_label: settings.cta_label,
           service_fee: settings.service_fee,
           service_fee_before: settings.service_fee_before,
@@ -202,6 +204,23 @@ export default function SettingsPage() {
                   placeholder="Why it is required · who qualifies for a refund · how long it takes · how it is sent · any deductions"
                   value={settings.deposit_terms ?? ""}
                   onChange={(e) => set("deposit_terms", e.target.value)}
+                />
+              </Field>
+              <Field label="Case page heading after payment (empty = “We're preparing your appeal”)">
+                <input
+                  className="input"
+                  placeholder="We're preparing your appeal"
+                  value={settings.progress_title ?? ""}
+                  onChange={(e) => set("progress_title", e.target.value)}
+                />
+              </Field>
+              <Field label="Line under that heading (empty = built-in text)">
+                <textarea
+                  rows={2}
+                  className="input"
+                  placeholder="Your case is in our queue. We're putting together your appeal and will file it with Garena support."
+                  value={settings.progress_body ?? ""}
+                  onChange={(e) => set("progress_body", e.target.value)}
                 />
               </Field>
               <Field label="Deposit & refund terms — English (optional; adds a small translate toggle)">

@@ -22,6 +22,8 @@ interface CaseInfo {
   createdAt: string;
   /** When the deposit step opens, if one is still owed. */
   depositAt: string | null;
+  progressTitle: string | null;
+  progressBody: string | null;
 }
 
 const STEP_TEXT: Record<string, { title: string; body: string }> = {
@@ -144,7 +146,15 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
     };
   }, [params.orderId]);
 
-  const step = info ? STEP_TEXT[info.status] ?? STEP_TEXT.PENDING : null;
+  const builtIn = info ? STEP_TEXT[info.status] ?? STEP_TEXT.PENDING : null;
+  // A paid case in progress can carry the operator's own wording from Settings.
+  const step =
+    builtIn && info?.status === "IN_PROGRESS"
+      ? {
+          title: info.progressTitle || builtIn.title,
+          body: info.progressBody || builtIn.body,
+        }
+      : builtIn;
   const paid = info?.paymentStatus === "SUCCESS" || info?.amount === 0;
 
   return (
