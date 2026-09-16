@@ -59,6 +59,7 @@ export default function SettingsPage() {
           video_3_title: settings.video_3_title,
           video_3_duration: settings.video_3_duration,
           deposit_enabled: settings.deposit_enabled,
+          deposit_delay_enabled: settings.deposit_delay_enabled,
           deposit_amount: settings.deposit_amount,
           deposit_terms: settings.deposit_terms,
           deposit_terms_en: settings.deposit_terms_en,
@@ -191,6 +192,12 @@ export default function SettingsPage() {
                   <select className="input" value={settings.deposit_enabled ?? "false"} onChange={(e) => set("deposit_enabled", e.target.value)}>
                     <option value="false">Off</option>
                     <option value="true">On</option>
+                  </select>
+                </Field>
+                <Field label="15-minute wait before deposit page">
+                  <select className="input" value={settings.deposit_delay_enabled ?? "true"} onChange={(e) => set("deposit_delay_enabled", e.target.value)}>
+                    <option value="true">On — timer, then deposit page</option>
+                    <option value="false">Off — deposit page right after payment</option>
                   </select>
                 </Field>
                 <Field label="Deposit amount (₹)">

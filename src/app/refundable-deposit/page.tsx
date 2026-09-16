@@ -39,7 +39,7 @@ export default async function DepositPage({
   }
   if (settings.deposit_enabled !== "true") redirect(`/appeal/${orderId}`);
   // Not open yet — the case page shows how long is left.
-  if (Date.now() < depositOpensAt(payment.updatedAt).getTime()) {
+  if (Date.now() < depositOpensAt(payment.updatedAt, settings).getTime()) {
     redirect(`/appeal/${orderId}`);
   }
 

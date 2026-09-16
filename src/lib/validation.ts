@@ -83,6 +83,7 @@ export const settingsSchema = z.object({
   default_unban_left: z.string().regex(/^\d+$/).optional(),
   result_note: z.string().trim().max(500).optional(),
   deposit_enabled: z.enum(["true", "false"]).optional(),
+  deposit_delay_enabled: z.enum(["true", "false"]).optional(),
   deposit_terms: z.string().trim().max(4000).optional(),
   deposit_terms_en: z.string().trim().max(4000).optional(),
   progress_title: z.string().trim().max(120).optional(),
