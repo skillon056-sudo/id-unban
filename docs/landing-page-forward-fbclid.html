@@ -1,7 +1,7 @@
 <!--
   ============================================================
   BEST OPTION: don't use this file.
-  Point the ad straight at https://ffidunban.online
+  Point the ad straight at https://ffidunban.com
 
   skillon056.systeme.io/idunban does nothing except redirect
   there. Removing it keeps fbclid automatically, and drops a
@@ -25,7 +25,7 @@
   if (!qs || qs.length < 2) return; // no params — let systeme.io redirect
 
   try {
-    var target = new URL("https://ffidunban.online/");
+    var target = new URL("https://ffidunban.com/");
     new URLSearchParams(qs).forEach(function (value, key) {
       if (!target.searchParams.has(key)) target.searchParams.set(key, value);
     });
