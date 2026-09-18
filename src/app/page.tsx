@@ -57,9 +57,12 @@ export default async function HomePage() {
                   recover your ID
                 </span>
               </h1>
-              <p className="mx-auto mt-5 max-w-xl text-base text-muted sm:text-lg">
-                {siteName} lets you instantly look up whether your Free Fire ID is
-                banned, see the reason, and submit a verified unban request.
+              <p className="mx-auto mt-5 max-w-xl whitespace-pre-line text-base text-muted sm:text-lg">
+                {/* Editable in Settings; {site} becomes the site name. */}
+                {(
+                  s.hero_subtitle ||
+                  "{site} lets you instantly look up whether your Free Fire ID is banned, see the reason, and submit a verified unban request."
+                ).replace(/{site}/g, s.site_name || siteName)}
               </p>
             </div>
 

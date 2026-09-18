@@ -40,6 +40,7 @@ export default function SettingsPage() {
           usd_rate: settings.usd_rate,
           support_contact: settings.support_contact,
           footer_note: settings.footer_note,
+          hero_subtitle: settings.hero_subtitle,
           maintenance_mode: settings.maintenance_mode,
           default_status: settings.default_status,
           payment_enabled: settings.payment_enabled,
@@ -111,6 +112,15 @@ export default function SettingsPage() {
           </div>
           <Field label="USD rate (₹ per $1) — used to show prices in $ on the site">
             <input className="input" inputMode="decimal" value={settings.usd_rate ?? ""} onChange={(e) => set("usd_rate", e.target.value.replace(/[^\d.]/g, ""))} />
+          </Field>
+          <Field label="Homepage line under the headline ({site} = website name; empty = built-in text)">
+            <textarea
+              rows={3}
+              className="input"
+              placeholder="{site} lets you instantly look up whether your Free Fire ID is banned, see the reason, and submit a verified unban request."
+              value={settings.hero_subtitle ?? ""}
+              onChange={(e) => set("hero_subtitle", e.target.value)}
+            />
           </Field>
           <Field label="Support contact">
             <input className="input" value={settings.support_contact ?? ""} onChange={(e) => set("support_contact", e.target.value)} />
