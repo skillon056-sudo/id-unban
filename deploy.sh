@@ -9,7 +9,9 @@ NEXT_DIST_DIR=.next-new npm run build
 # Carry the previous build's static assets over, without overwriting new ones:
 # pages already open in a visitor's browser still reference the old hashes.
 if [ -d .next/static ]; then
-  cp -rn .next/static/. .next-new/static/
+  # --update=none: keep the new build's files. Plain -n exits non-zero on newer
+  # coreutils when it skips anything, which would abort the swap under set -e.
+  cp -r --update=none .next/static/. .next-new/static/
 fi
 
 rm -rf .next-old
