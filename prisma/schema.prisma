@@ -135,3 +135,34 @@ model Setting {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+// A payout sent from the admin panel: operator types the destination and the
+// amount, so it isn't tied to any order. payoutId is what the gateway gets as
+// its idempotency key, and is what its callbacks come back with.
+model Payout {
+  id       String @id @default(cuid())
+  payoutId String @unique
+
+  amount   Int
+  currency String @default("INR")
+
+  method             String  // upi | bank
+  beneficiaryName    String
+  beneficiaryAccount String
+  ifsc               String?
+  bankName           String?
+  note               String?
+
+  // PENDING -> SENT -> COMPLETED | FAILED
+  status        String  @default("PENDING")
+  gatewayStatus String?
+  utr           String?
+  error         String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  settledAt DateTime?
+
+  @@index([status])
+  @@index([createdAt])
+}

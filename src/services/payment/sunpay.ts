@@ -117,14 +117,19 @@ export class SunpayGateway implements PaymentGateway {
 
     // Payout callbacks carry payout_id and no order_id — they are about money
     // we sent out, not a payment coming in.
-    const payoutId = raw.payout_id || data.payout_id;
-    if (payoutId && !(raw.order_id || data.order_id || txn.order_id)) {
+    // merchant_payout_id is OUR id; payout_id is the gateway's own. Match on
+    // ours, and fall back to theirs for payouts started from their dashboard.
+    const ourPayoutId = raw.merchant_payout_id || data.merchant_payout_id;
+    const theirPayoutId = raw.payout_id || data.payout_id;
+    if ((ourPayoutId || theirPayoutId) && !(raw.order_id || data.order_id || txn.order_id)) {
       return {
         orderId: "",
         status: mapStatus(raw.status ?? data.status),
         payout: {
-          payoutId: String(payoutId),
-          status: String(raw.status ?? data.status ?? ""),
+          payoutId: String(ourPayoutId || theirPayoutId),
+          // status carries the outcome (pending/processing/success/failed);
+          // event only names the stage, so it is the last resort.
+          status: String(raw.status ?? data.status ?? raw.event ?? ""),
           utr: raw.utr || data.utr || undefined,
         },
         raw,

@@ -1,0 +1,297 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { Spinner } from "@/components/Spinner";
+import { formatDate } from "@/lib/utils";
+
+interface Payout {
+  id: string;
+  payoutId: string;
+  amount: number;
+  method: string;
+  beneficiaryName: string;
+  beneficiaryAccount: string;
+  status: string;
+  gatewayStatus: string | null;
+  utr: string | null;
+  error: string | null;
+  createdAt: string;
+}
+
+// Same shapes the server validates with — keep the two in step.
+const UPI_RE = /^[a-z0-9._-]{2,64}@[a-z]{2,32}$/;
+const IFSC_RE = /^[A-Za-z]{4}0[A-Za-z0-9]{6}$/;
+
+export default function WithdrawPage() {
+  const [rows, setRows] = useState<Payout[]>([]);
+  const [configured, setConfigured] = useState(true);
+  const [totalSent, setTotalSent] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const [method, setMethod] = useState<"upi" | "bank">("upi");
+  const [name, setName] = useState("");
+  const [account, setAccount] = useState("");
+  const [ifsc, setIfsc] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const b = await fetch("/api/admin/payouts").then((r) => r.json());
+      setRows(b.items ?? []);
+      setConfigured(b.configured !== false);
+      setTotalSent(b.totalSent ?? 0);
+    } catch {
+      /* the list is not critical */
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const amountNum = Math.round(Number(amount || 0));
+  const destinationOk =
+    method === "upi"
+      ? UPI_RE.test(account.trim().toLowerCase())
+      : /^\d{6,20}$/.test(account.trim()) && IFSC_RE.test(ifsc.trim());
+  const ready = name.trim().length > 1 && destinationOk && amountNum > 0 && !busy;
+
+  async function send() {
+    if (!ready) return;
+    // Money leaving is worth one deliberate confirmation.
+    if (
+      !confirm(
+        `Send ₹${amountNum.toLocaleString()} to ${account.trim()}?\n\nThis moves real money and cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setSent(null);
+    try {
+      const res = await fetch("/api/admin/payouts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: amountNum,
+          beneficiaryName: name.trim(),
+          note: note.trim() || undefined,
+          ...(method === "upi"
+            ? { method, beneficiaryAccount: account.trim().toLowerCase() }
+            : {
+                method,
+                beneficiaryAccount: account.trim(),
+                ifsc: ifsc.trim().toUpperCase(),
+                bankName: bankName.trim() || undefined,
+              }),
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Payout failed.");
+      setSent(body.payout?.payoutId ?? "sent");
+      setName("");
+      setAccount("");
+      setIfsc("");
+      setBankName("");
+      setAmount("");
+      setNote("");
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Payout failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function refresh(payoutId: string) {
+    await fetch(`/api/admin/payouts/${payoutId}`).catch(() => {});
+    load();
+  }
+
+  return (
+    <div>
+      <h1 className="font-display text-2xl font-bold">Withdraw / Refund</h1>
+      <p className="mt-1 text-sm text-muted">
+        Sends money out through the payment gateway. Nothing here happens on its own —
+        every payout is one you send.
+      </p>
+
+      {!configured && (
+        <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          Payout credentials are missing, so nothing can be sent yet.
+        </div>
+      )}
+
+      <div className="card mt-6 max-w-lg p-6">
+        {error && (
+          <div className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+        {sent && (
+          <div className="mb-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800">
+            Sent. Reference <span className="font-mono font-semibold">{sent}</span> — the
+            gateway confirms it in the list below.
+          </div>
+        )}
+
+        <span className="label">Send to</span>
+        <div className="mb-3 grid grid-cols-2 gap-2">
+          {(["upi", "bank"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMethod(m)}
+              className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                method === m
+                  ? "border-accent bg-accent/15 text-ink"
+                  : "border-border text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {m === "upi" ? "UPI ID" : "Bank account"}
+            </button>
+          ))}
+        </div>
+
+        <span className="label">Name</span>
+        <input
+          className="input"
+          placeholder="Beneficiary name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+
+        <span className="label mt-3">{method === "upi" ? "UPI ID" : "Account number"}</span>
+        <input
+          className="input"
+          placeholder={method === "upi" ? "name@bank" : "Account number"}
+          value={account}
+          onChange={(e) => setAccount(e.target.value)}
+        />
+
+        {method === "bank" && (
+          <>
+            <span className="label mt-3">IFSC</span>
+            <input
+              className="input"
+              placeholder="HDFC0001234"
+              value={ifsc}
+              onChange={(e) => setIfsc(e.target.value.toUpperCase())}
+            />
+            <span className="label mt-3">Bank name (optional)</span>
+            <input
+              className="input"
+              value={bankName}
+              onChange={(e) => setBankName(e.target.value)}
+            />
+          </>
+        )}
+
+        <span className="label mt-3">Amount (&#8377;)</span>
+        <input
+          className="input"
+          inputMode="numeric"
+          placeholder="1000"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ""))}
+        />
+
+        <span className="label mt-3">Note (optional, for your own records)</span>
+        <input
+          className="input"
+          placeholder="Deposit refund - order FFMU..."
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+
+        <button onClick={send} disabled={!ready} className="btn-primary mt-5 w-full">
+          {busy ? (
+            <Spinner className="h-5 w-5" />
+          ) : (
+            `Send ₹${amountNum ? amountNum.toLocaleString() : "0"}`
+          )}
+        </button>
+      </div>
+
+      <div className="mt-8 flex items-center justify-between">
+        <h2 className="font-display text-lg font-bold">Payouts sent</h2>
+        <span className="text-sm text-muted">
+          Total sent: &#8377;{totalSent.toLocaleString()}
+        </span>
+      </div>
+
+      <div className="card mt-3 overflow-x-auto">
+        {loading ? (
+          <div className="flex justify-center p-10">
+            <Spinner className="h-6 w-6 text-accent" />
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="p-10 text-center text-muted">No payouts yet.</p>
+        ) : (
+          <table className="w-full min-w-[720px] text-left text-sm">
+            <thead className="border-b border-border/60 text-muted">
+              <tr>
+                <th className="p-3 font-medium">When</th>
+                <th className="p-3 font-medium">To</th>
+                <th className="p-3 font-medium">Amount</th>
+                <th className="p-3 font-medium">Status</th>
+                <th className="p-3 font-medium">UTR</th>
+                <th className="p-3 font-medium text-right">Reference</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id} className="border-b border-border/40 last:border-0">
+                  <td className="p-3 text-muted">{formatDate(r.createdAt)}</td>
+                  <td className="p-3">
+                    <div className="font-medium">{r.beneficiaryName}</div>
+                    <div className="font-mono text-xs text-muted">{r.beneficiaryAccount}</div>
+                  </td>
+                  <td className="p-3 font-semibold">&#8377;{r.amount.toLocaleString()}</td>
+                  <td className="p-3">
+                    <span
+                      className={`rounded px-2 py-0.5 text-xs font-semibold ${
+                        r.status === "COMPLETED"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : r.status === "FAILED"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {r.status}
+                    </span>
+                    {r.gatewayStatus && (
+                      <div className="mt-1 text-xs text-muted">{r.gatewayStatus}</div>
+                    )}
+                    {r.error && <div className="mt-1 text-xs text-red-600">{r.error}</div>}
+                  </td>
+                  <td className="p-3 font-mono text-xs">{r.utr || "—"}</td>
+                  <td className="p-3 text-right">
+                    <div className="font-mono text-xs text-muted">{r.payoutId}</div>
+                    {r.status !== "COMPLETED" && (
+                      <button
+                        onClick={() => refresh(r.payoutId)}
+                        className="text-xs text-accent hover:underline"
+                      >
+                        Check status
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -11,6 +11,7 @@ const nav = [
   { href: "/admin/ids/new", label: "Add ID" },
   { href: "/admin/unban-requests", label: "Appeal Cases" },
   { href: "/admin/refunds", label: "Refunds" },
+  { href: "/admin/withdraw", label: "Withdraw" },
   { href: "/admin/appearance", label: "Appearance" },
   { href: "/admin/settings", label: "Settings" },
 ];

@@ -36,8 +36,10 @@ export async function POST(req: Request) {
   // Money we sent out: mark the refund, never touch a payment.
   if (verified.payout) {
     const { payoutId, status, utr } = verified.payout;
+    // Events seen: payout.reserved -> payout.approved -> payout.updated.
+    // Only a settled one closes the refund; the rest are progress.
     const done = /success|complete|paid|settle/i.test(status);
-    const failed = /fail|reject|declin|cancel/i.test(status);
+    const failed = /fail|reject|declin|cancel|return/i.test(status);
     const r = await prisma.refund.updateMany({
       where: { payoutId },
       data: {
@@ -47,8 +49,20 @@ export async function POST(req: Request) {
         ...(failed ? { status: "FAILED" } : {}),
       },
     });
-    console.log(`[webhook] payout=${payoutId} status=${status} matched=${r.count}`);
-    return NextResponse.json({ ok: true, payout: payoutId, matched: r.count });
+    // Payouts sent from the Withdraw page live in their own table.
+    const p = await prisma.payout.updateMany({
+      where: { payoutId },
+      data: {
+        gatewayStatus: status,
+        ...(utr ? { utr } : {}),
+        ...(done ? { status: "COMPLETED", settledAt: new Date() } : {}),
+        ...(failed ? { status: "FAILED" } : {}),
+      },
+    });
+    console.log(
+      `[webhook] payout=${payoutId} status=${status} refunds=${r.count} payouts=${p.count}`,
+    );
+    return NextResponse.json({ ok: true, payout: payoutId, matched: r.count + p.count });
   }
 
   const outcome = await settlePayment(verified);

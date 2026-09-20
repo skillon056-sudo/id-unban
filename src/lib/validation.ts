@@ -135,3 +135,22 @@ export const settingsSchema = z.object({
   img_faq_bg: z.string().trim().max(500).optional(),
   img_footer_bg: z.string().trim().max(500).optional(),
 });
+
+// A payout typed in by the operator. Exactly one destination shape, so a bank
+// transfer can't be sent without an IFSC.
+export const payoutRequestSchema = z.intersection(
+  z.object({
+    amount: z.number().int().min(1).max(500000),
+    beneficiaryName: z.string().trim().min(2).max(120),
+    note: z.string().trim().max(200).optional(),
+  }),
+  z.discriminatedUnion("method", [
+    z.object({ method: z.literal("upi"), beneficiaryAccount: upiIdSchema }),
+    z.object({
+      method: z.literal("bank"),
+      beneficiaryAccount: z.string().trim().regex(/^\d{6,20}$/, "Enter a valid account number."),
+      ifsc: z.string().trim().regex(/^[A-Za-z]{4}0[A-Za-z0-9]{6}$/, "Enter a valid IFSC."),
+      bankName: z.string().trim().max(120).optional(),
+    }),
+  ]),
+);
