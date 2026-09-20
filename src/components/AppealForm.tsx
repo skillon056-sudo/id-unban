@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Spinner } from "./Spinner";
 import { OpenInBrowser } from "./OpenInBrowser";
 import { detectInApp } from "@/lib/in-app-browser";
@@ -24,6 +24,59 @@ export function AppealForm({
   // Set when we can't redirect here (in-app browser) — user finishes elsewhere.
   const [handoffUrl, setHandoffUrl] = useState<string | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  // While the customer is on the gateway, this page watches for the payment —
+  // the gateway's checkout has no way to send anyone back.
+  const [waiting, setWaiting] = useState<{ orderId: string; url: string } | null>(null);
+  const payTabRef = useRef<Window | null>(null);
+
+  function closePayTab() {
+    try {
+      payTabRef.current?.close();
+    } catch {
+      /* already gone, or the browser refused */
+    }
+    payTabRef.current = null;
+    try {
+      window.focus();
+    } catch {
+      /* best effort */
+    }
+  }
+
+  useEffect(() => {
+    if (!waiting) return;
+    let stop = false;
+    const until = Date.now() + 10 * 60 * 1000;
+
+    async function tick() {
+      if (stop || Date.now() > until) return;
+      try {
+        const s = await fetch(`/api/appeal/${encodeURIComponent(waiting!.orderId)}`).then((r) =>
+          r.json(),
+        );
+        if (stop) return;
+        if (s.paymentStatus === "SUCCESS") {
+          closePayTab();
+          // The case page reports the conversion and runs the next step.
+          window.location.href = `/appeal/${encodeURIComponent(waiting!.orderId)}`;
+          return;
+        }
+      } catch {
+        /* keep watching */
+      }
+      setTimeout(tick, 2000);
+    }
+    tick();
+
+    const wake = () => document.visibilityState === "visible" && tick();
+    document.addEventListener("visibilitychange", wake);
+    window.addEventListener("focus", wake);
+    return () => {
+      stop = true;
+      document.removeEventListener("visibilitychange", wake);
+      window.removeEventListener("focus", wake);
+    };
+  }, [waiting]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -121,7 +174,10 @@ export function AppealForm({
       // the customer on a page that has already advanced.
       if (payTab) {
         payTab.location.href = body.redirectUrl;
-        window.location.href = `/appeal/${encodeURIComponent(body.orderId)}`;
+        payTabRef.current = payTab;
+        // Stay here and watch, so the checkout tab can be closed when it lands.
+        setWaiting({ orderId: body.orderId, url: body.redirectUrl });
+        setBusy(false);
         return;
       }
       // Popup blocked. Don't hand this tab to the gateway — that is the tab
@@ -138,6 +194,27 @@ export function AppealForm({
   }
 
   if (handoffUrl) return <OpenInBrowser url={handoffUrl} />;
+
+  if (waiting) {
+    return (
+      <div className="mt-4 rounded-xl border border-accent/60 bg-accent/10 p-5 text-center animate-fade-up">
+        <Spinner className="mx-auto h-6 w-6 text-ink" />
+        <p className="mt-3 text-sm font-semibold text-ink">Waiting for your payment…</p>
+        <p className="mt-1 text-xs text-muted">
+          Finish the payment in the other tab. This page updates by itself — don&apos;t
+          close it.
+        </p>
+        <a
+          href={waiting.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-ghost mt-3 inline-flex text-sm"
+        >
+          Payment page didn&apos;t open? Tap here
+        </a>
+      </div>
+    );
+  }
 
   // The gateway page takes a moment to appear; show progress instead of a
   // dead-looking button while the browser navigates away.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Spinner } from "./Spinner";
 import { OpenInBrowser } from "./OpenInBrowser";
 import { detectInApp } from "@/lib/in-app-browser";
@@ -29,6 +29,22 @@ export function DepositForm({
   // since the gateway's own page has no way to send anyone back.
   const [waitingFor, setWaitingFor] = useState<string | null>(null);
   const [payFailed, setPayFailed] = useState(false);
+  // The checkout tab we opened, so it can be closed once the payment lands.
+  const payTabRef = useRef<Window | null>(null);
+
+  function closePayTab() {
+    try {
+      payTabRef.current?.close();
+    } catch {
+      /* it may already be gone, or the browser may refuse */
+    }
+    payTabRef.current = null;
+    try {
+      window.focus();
+    } catch {
+      /* best effort */
+    }
+  }
 
   const phoneValid = PHONE_RE.test(phone);
   const upiValid = UPI_RE.test(upi.trim().toLowerCase());
@@ -50,10 +66,12 @@ export function DepositForm({
         );
         if (stop) return;
         if (s.status === "SUCCESS") {
+          closePayTab();
           window.location.href = `/appeal/${encodeURIComponent(orderId)}`;
           return;
         }
         if (s.status === "FAILED" || s.status === "CANCELLED") {
+          closePayTab();
           setPayFailed(true);
           setWaitingFor(null);
           return;
@@ -127,7 +145,10 @@ export function DepositForm({
 
       // Checkout goes to its own tab; this one stays and watches for the
       // payment. If the tab was blocked, the link below opens it on a click.
-      if (payTab) payTab.location.href = body.redirectUrl;
+      if (payTab) {
+        payTab.location.href = body.redirectUrl;
+        payTabRef.current = payTab;
+      }
       setWaitingFor(body.redirectUrl);
       setBusy(false);
     } catch {
