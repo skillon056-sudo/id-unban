@@ -50,6 +50,7 @@ export default async function DepositPage({
   const termsEn = settings.deposit_terms_en || "";
   const support = settings.support_contact || "";
   const note = settings.deposit_note || "";
+  const voice = settings.deposit_voice_url || "";
 
   // Countdown for this step. Starts the first time the customer opens the page
   // — not when the payment cleared — so it is genuinely the time they had.
@@ -111,6 +112,16 @@ export default async function DepositPage({
                 <div className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-800">
                   Refund terms have not been published yet. Please contact support
                   {support ? ` at ${support}` : ""} before paying.
+                </div>
+              )}
+
+              {voice && (
+                <div className="mt-3 rounded-xl border border-border bg-slate-100 p-3">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">
+                    Voice note
+                  </p>
+                  {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                  <audio src={voice} controls preload="none" className="w-full" />
                 </div>
               )}
 

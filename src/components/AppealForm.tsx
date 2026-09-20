@@ -124,8 +124,12 @@ export function AppealForm({
         window.location.href = `/appeal/${encodeURIComponent(body.orderId)}`;
         return;
       }
-      // Popup blocked — behave exactly as before rather than stranding anyone.
-      window.location.href = body.redirectUrl;
+      // Popup blocked. Don't hand this tab to the gateway — that is the tab
+      // that watches for the payment and moves on afterwards. Carry the
+      // checkout link to the case page, which offers it as a button: a click
+      // there is a fresh gesture, so that window always opens.
+      window.location.href =
+        `/appeal/${encodeURIComponent(body.orderId)}?pay=${encodeURIComponent(body.redirectUrl)}`;
     } catch {
       dropTab();
       setError("Network error. Please try again.");

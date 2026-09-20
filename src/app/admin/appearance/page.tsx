@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Spinner } from "@/components/Spinner";
-import { IMAGE_SLOTS } from "@/lib/appearance";
+import { IMAGE_SLOTS, AUDIO_SLOTS } from "@/lib/appearance";
 
 type Settings = Record<string, string>;
 
@@ -30,7 +30,7 @@ export default function AppearancePage() {
     setError(null);
     try {
       const payload: Settings = {};
-      for (const slot of IMAGE_SLOTS) payload[slot.key] = settings[slot.key] ?? "";
+      for (const slot of [...IMAGE_SLOTS, ...AUDIO_SLOTS]) payload[slot.key] = settings[slot.key] ?? "";
       const res = await fetch("/api/admin/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -75,6 +75,20 @@ export default function AppearancePage() {
             ))}
           </div>
 
+          <div className="mt-8 space-y-4">
+            {AUDIO_SLOTS.map((slot) => (
+              <ImageSlotRow
+                key={slot.key}
+                label={slot.label}
+                hint={slot.hint}
+                value={settings[slot.key] ?? ""}
+                onChange={(v) => set(slot.key, v)}
+                onError={setError}
+                audio
+              />
+            ))}
+          </div>
+
           <div className="sticky bottom-0 mt-6 flex items-center gap-4 border-t border-border bg-bg/90 py-4 backdrop-blur">
             <button onClick={save} disabled={busy} className="btn-primary">
               {busy ? <Spinner className="h-5 w-5" /> : "Save images"}
@@ -93,12 +107,14 @@ function ImageSlotRow({
   value,
   onChange,
   onError,
+  audio = false,
 }: {
   label: string;
   hint: string;
   value: string;
   onChange: (v: string) => void;
   onError: (msg: string) => void;
+  audio?: boolean;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -123,10 +139,14 @@ function ImageSlotRow({
     <div className="card flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
       <div className="grid h-24 w-40 shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-surface">
         {value ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={value} alt={label} className="h-full w-full object-cover" />
+          audio ? (
+            <span className="text-2xl">🎙️</span>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={value} alt={label} className="h-full w-full object-cover" />
+          )
         ) : (
-          <span className="text-xs text-muted">No image</span>
+          <span className="text-xs text-muted">{audio ? "No audio" : "No image"}</span>
         )}
       </div>
 
@@ -139,11 +159,15 @@ function ImageSlotRow({
           value={value}
           onChange={(e) => onChange(e.target.value)}
         />
+        {audio && value && (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <audio src={value} controls preload="none" className="mt-2 w-full" />
+        )}
         <div className="mt-2 flex gap-2">
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept={audio ? "audio/*" : "image/*"}
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];

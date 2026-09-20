@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -54,6 +54,14 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
   const [info, setInfo] = useState<CaseInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  // Set when the checkout had to be opened by hand (popup blocked). Read from
+  // the URL on mount rather than useSearchParams, which needs a Suspense
+  // boundary and would make the whole page bail out of prerendering.
+  const [payUrl, setPayUrl] = useState<string | null>(null);
+  useEffect(() => {
+    setPayUrl(new URLSearchParams(window.location.search).get("pay"));
+  }, []);
+  const pollNow = useRef<() => void>(() => {});
 
   // Count down to the deposit step, then move on to it. The server holds the
   // same deadline, so this only decides when to navigate — it can't open early.
@@ -142,8 +150,20 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
       }
     }
     poll();
+    pollNow.current = poll;
+
+    // Coming back from the gateway's tab should show the result at once, not
+    // after the next scheduled check.
+    const wake = () => {
+      if (document.visibilityState === "visible") poll();
+    };
+    document.addEventListener("visibilitychange", wake);
+    window.addEventListener("focus", wake);
+
     return () => {
       active = false;
+      document.removeEventListener("visibilitychange", wake);
+      window.removeEventListener("focus", wake);
     };
   }, [params.orderId]);
 
@@ -189,6 +209,27 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
               </div>
 
               <div className="px-8 pb-8">
+                {payUrl && !paid && (
+                  <div className="mb-5 rounded-xl border border-accent/60 bg-accent/10 p-4 text-center">
+                    <p className="text-sm font-semibold text-ink">
+                      Your payment page is ready
+                    </p>
+                    <p className="mt-1 text-xs text-muted">
+                      It opens in a new tab. Keep this one open — it updates by
+                      itself once the payment goes through.
+                    </p>
+                    <a
+                      href={payUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setTimeout(() => pollNow.current(), 2000)}
+                      className="btn-primary mt-3 inline-flex"
+                    >
+                      Open payment page
+                    </a>
+                  </div>
+                )}
+
                 {depositAt != null && depositAt > now && (
                   <div className="mb-5 rounded-xl border border-accent/50 bg-accent/10 p-4 text-center">
                     <p className="text-xs font-bold uppercase tracking-wide text-muted">

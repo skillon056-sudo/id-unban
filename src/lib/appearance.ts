@@ -20,3 +20,12 @@ export const IMAGE_SLOTS: ImageSlot[] = [
 ];
 
 export const IMAGE_KEYS = IMAGE_SLOTS.map((s) => s.key);
+
+/** Uploaded audio, shown on the deposit step. */
+export const AUDIO_SLOTS: ImageSlot[] = [
+  {
+    key: "deposit_voice_url",
+    label: "Deposit page voice note",
+    hint: "Plays under the deposit & refund terms. MP3, M4A, OGG or WAV, up to 15 MB.",
+  },
+];

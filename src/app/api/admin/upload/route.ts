@@ -13,8 +13,19 @@ const ALLOWED: Record<string, string> = {
   "image/webp": "webp",
   "image/gif": "gif",
   "image/avif": "avif",
+  // Voice notes. Phones record m4a (iPhone) or ogg/opus (WhatsApp, Android).
+  "audio/mpeg": "mp3",
+  "audio/mp4": "m4a",
+  "audio/x-m4a": "m4a",
+  "audio/aac": "m4a",
+  "audio/ogg": "ogg",
+  "audio/opus": "ogg",
+  "audio/wav": "wav",
+  "audio/x-wav": "wav",
+  "audio/webm": "weba",
 };
-const MAX_BYTES = 6 * 1024 * 1024; // 6 MB
+const MAX_IMAGE_BYTES = 6 * 1024 * 1024;  // 6 MB
+const MAX_AUDIO_BYTES = 15 * 1024 * 1024; // 15 MB — a few minutes of voice
 
 // POST multipart/form-data with field "file". Saves to /public/uploads and
 // returns { url }. Auth enforced by middleware for /api/admin/*.
@@ -37,10 +48,18 @@ export async function POST(req: Request) {
 
   const ext = ALLOWED[file.type];
   if (!ext) {
-    return NextResponse.json({ error: "Only JPG, PNG, WEBP, GIF or AVIF images are allowed." }, { status: 415 });
+    return NextResponse.json(
+      { error: "Allowed: JPG, PNG, WEBP, GIF, AVIF images, or MP3, M4A, OGG, WAV audio." },
+      { status: 415 },
+    );
   }
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: "Image is too large (max 6 MB)." }, { status: 413 });
+  const isAudio = file.type.startsWith("audio/");
+  const limit = isAudio ? MAX_AUDIO_BYTES : MAX_IMAGE_BYTES;
+  if (file.size > limit) {
+    return NextResponse.json(
+      { error: `File is too large (max ${limit / 1024 / 1024} MB).` },
+      { status: 413 },
+    );
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -53,7 +72,7 @@ export async function POST(req: Request) {
     // Serverless hosts (Vercel) have a read-only filesystem — file uploads
     // can't persist. Paste an image URL instead, or add a blob store.
     return NextResponse.json(
-      { error: "File uploads aren't supported on this host. Paste an image URL instead." },
+      { error: "File uploads aren't supported on this host. Paste a URL instead." },
       { status: 501 },
     );
   }
