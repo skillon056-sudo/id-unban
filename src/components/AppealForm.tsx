@@ -5,6 +5,7 @@ import { Spinner } from "./Spinner";
 import { OpenInBrowser } from "./OpenInBrowser";
 import { detectInApp } from "@/lib/in-app-browser";
 import { identify, track } from "@/lib/pixel";
+import { readCampaign } from "@/lib/campaign";
 import { rememberCase } from "./ResumeCase";
 
 // Minimal intake: just the email we need to deliver the service and report
@@ -111,6 +112,7 @@ export function AppealForm({
           gameId,
           contactEmail: email,
           fbclid: new URLSearchParams(window.location.search).get("fbclid") ?? undefined,
+          campaign: readCampaign(),
         }),
       });
       const body = await res.json();

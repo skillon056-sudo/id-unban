@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { identify, trackOnce } from "@/lib/pixel";
+import { captureCampaign } from "@/lib/campaign";
 
 // The gateway has no return leg — its page just ends on "Payment Successful".
 // So remember the order they left with, and pick the flow back up the moment
@@ -34,6 +35,9 @@ export function ResumeCase() {
   const [info, setInfo] = useState<Info | null>(null);
 
   useEffect(() => {
+    // Landing page: remember which ad this visit came from.
+    captureCampaign();
+
     let saved: { orderId?: string; t?: number } | null = null;
     try {
       saved = JSON.parse(localStorage.getItem(KEY) || "null");

@@ -54,8 +54,12 @@ export async function POST(req: Request) {
   // the payer back, so the conversion is reported from the webhook long after
   // this tab is gone. Keep the ad-click identifiers so that event can still be
   // tied to the ad that produced it.
+  const sent = body as { fbclid?: string; campaign?: Record<string, string> };
   const attribution = JSON.stringify({
-    fbc: fbc(req, (body as { fbclid?: string })?.fbclid),
+    fbc: fbc(req, sent?.fbclid),
+    // Which ad the visit came from, so paying customers can be traced back to
+    // the ad set that produced them — the click id alone doesn't say.
+    campaign: cleanCampaign(sent?.campaign),
     fbp: readCookie(req, "_fbp"),
     ip: clientIp(req),
     ua: req.headers.get("user-agent"),
@@ -230,4 +234,16 @@ async function resumeFor(contactEmail: string, depositEnabled: boolean) {
     redirectUrl: `/appeal/${encodeURIComponent(paid.orderId)}`,
     resumed: true,
   };
+}
+
+// Only the known utm fields, trimmed — this comes from the browser.
+function cleanCampaign(input: unknown): Record<string, string> | undefined {
+  if (!input || typeof input !== "object") return undefined;
+  const allow = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "utm_id"];
+  const out: Record<string, string> = {};
+  for (const k of allow) {
+    const v = (input as Record<string, unknown>)[k];
+    if (typeof v === "string" && v) out[k] = v.slice(0, 120);
+  }
+  return Object.keys(out).length ? out : undefined;
 }
