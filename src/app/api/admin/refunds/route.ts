@@ -19,6 +19,7 @@ export async function GET(req: Request) {
       { orderId: { contains: search } },
       { gameId: { contains: search } },
       { upiId: { contains: search, mode: "insensitive" } },
+      { phone: { contains: search } },
     ];
   }
 

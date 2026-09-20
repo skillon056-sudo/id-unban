@@ -7,6 +7,7 @@ import { DepositForm } from "@/components/DepositForm";
 import { AccountQuestions } from "@/components/AccountQuestions";
 import { TermsBlock } from "@/components/TermsBlock";
 import { depositOpensAt } from "@/lib/deposit";
+import { DepositCountdown } from "@/components/DepositCountdown";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,26 @@ export default async function DepositPage({
   const terms = settings.deposit_terms || "";
   const termsEn = settings.deposit_terms_en || "";
   const support = settings.support_contact || "";
+  const note = settings.deposit_note || "";
+
+  // Countdown for this step. Starts the first time the customer opens the page
+  // — not when the payment cleared — so it is genuinely the time they had.
+  // 0 minutes switches it off.
+  const timerMinutes = Math.max(0, Math.round(Number(settings.deposit_timer_minutes ?? 25)));
+  let deadline: Date | null = null;
+  if (timerMinutes > 0) {
+    const req = await prisma.unbanRequest.findUnique({
+      where: { orderId },
+      select: { depositSeenAt: true },
+    });
+    let seen = req?.depositSeenAt ?? null;
+    if (!seen) {
+      seen = new Date();
+      await prisma.unbanRequest.update({ where: { orderId }, data: { depositSeenAt: seen } });
+    }
+    deadline = new Date(seen.getTime() + timerMinutes * 60 * 1000);
+  }
+  const expired = deadline != null && Date.now() >= deadline.getTime();
 
   // Already paid? Send them to the case page instead of charging twice.
   const existing = await prisma.payment.findFirst({
@@ -93,13 +114,34 @@ export default async function DepositPage({
                 </div>
               )}
 
-              <AccountQuestions orderId={orderId}>
-                <DepositForm
-                  orderId={orderId}
-                  amount={amount}
-                  termsPublished={Boolean(terms)}
-                />
-              </AccountQuestions>
+              {note && (
+                <p className="mt-5 whitespace-pre-line rounded-xl border border-border bg-white p-4 text-sm leading-relaxed text-slate-700">
+                  {note}
+                </p>
+              )}
+
+              {expired ? (
+                <div className="mt-5 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+                  <p className="font-semibold">Time for this step has run out.</p>
+                  <p className="mt-1 text-xs leading-relaxed">
+                    Nothing has been charged. Contact
+                    {support ? ` ${support}` : " support"} with your reference{" "}
+                    <span className="font-mono font-semibold">{orderId}</span> and we&apos;ll
+                    reopen it for you.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {deadline && <DepositCountdown deadline={deadline.toISOString()} />}
+                  <AccountQuestions orderId={orderId}>
+                    <DepositForm
+                      orderId={orderId}
+                      amount={amount}
+                      termsPublished={Boolean(terms)}
+                    />
+                  </AccountQuestions>
+                </>
+              )}
             </div>
           </div>
         </div>

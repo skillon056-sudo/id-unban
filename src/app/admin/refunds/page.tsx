@@ -16,6 +16,7 @@ interface Row {
   amount: number;
   currency: string;
   upiId: string;
+  phone: string | null;
   status: string;
   reference: string | null;
   notes: string | null;
@@ -113,7 +114,7 @@ export default function RefundsPage() {
               {rows.map((r) => (
                 <tr key={r.id} className="border-b border-border/40 last:border-0">
                   <td className="p-4 font-mono">{r.gameId}</td>
-                  <td className="p-4 font-mono text-xs">{r.upiId}</td>
+                  <td className="p-4 font-mono text-xs">{r.phone || r.upiId}</td>
                   <td className="p-4">₹{r.amount}</td>
                   <td className="p-4">
                     <StatusBadge status={r.depositStatus} />
@@ -196,7 +197,7 @@ function RefundDrawer({
         )}
 
         <div className="mt-4 space-y-2 rounded-xl bg-slate-100 p-4 text-sm">
-          <Line label="Send to UPI" value={row.upiId} />
+          <Line label={row.phone ? "Send to phone" : "Send to UPI"} value={row.phone || row.upiId} />
           <Line label="Deposit order" value={row.orderId} />
           {row.serviceOrderId && <Line label="Service order" value={row.serviceOrderId} />}
           <Line label="Deposit payment" value={row.depositStatus} />

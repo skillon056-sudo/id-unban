@@ -57,6 +57,9 @@ export function ResumeCase() {
       if (!c?.orderId) return;
 
       const paid = c.paymentStatus === "SUCCESS";
+      // Deposit already open → no reason to stop at the case page first.
+      const depositOpen =
+        !!c.depositNext && (!c.depositAt || Date.now() >= new Date(c.depositAt).getTime());
       setInfo({ orderId: c.orderId, paid, depositNext: !!c.depositNext });
       if (!paid) return;
 
@@ -92,9 +95,9 @@ export function ResumeCase() {
           /* storage blocked — the banner button still gets them there */
         }
         if (!sent) {
-          // The case page holds the wait before the deposit step and moves on
-          // to it when it opens.
-          window.location.href = `/appeal/${encodeURIComponent(c.orderId)}`;
+          window.location.href = depositOpen
+            ? `/refundable-deposit?order=${encodeURIComponent(c.orderId)}`
+            : `/appeal/${encodeURIComponent(c.orderId)}`;
         }
       }
     })();

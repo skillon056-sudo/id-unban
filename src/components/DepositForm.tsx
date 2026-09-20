@@ -6,7 +6,7 @@ import { OpenInBrowser } from "./OpenInBrowser";
 import { detectInApp } from "@/lib/in-app-browser";
 
 // Same shape the server validates with — keep the two in step.
-const UPI_RE = /^[a-z0-9._-]{2,64}@[a-z]{2,32}$/;
+const PHONE_RE = /^[6-9]\d{9}$/;
 
 export function DepositForm({
   orderId,
@@ -17,14 +17,14 @@ export function DepositForm({
   amount: number;
   termsPublished: boolean;
 }) {
-  const [upi, setUpi] = useState("");
+  const [phone, setPhone] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [handoffUrl, setHandoffUrl] = useState<string | null>(null);
 
-  const upiValid = UPI_RE.test(upi.trim().toLowerCase());
-  const canPay = upiValid && agreed && termsPublished && !busy;
+  const phoneValid = PHONE_RE.test(phone);
+  const canPay = phoneValid && agreed && termsPublished && !busy;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,7 +35,7 @@ export function DepositForm({
       const res = await fetch("/api/deposit/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, upiId: upi.trim().toLowerCase() }),
+        body: JSON.stringify({ orderId, phone }),
       });
       const body = await res.json();
       if (!res.ok || !body.redirectUrl) {
@@ -66,27 +66,28 @@ export function DepositForm({
         </div>
       )}
 
-      <label className="label" htmlFor="upi">
-        Enter your UPI ID for the refund
+      <label className="label" htmlFor="phone">
+        Enter your phone number for the refund
       </label>
       <input
-        id="upi"
+        id="phone"
         required
-        autoComplete="off"
-        inputMode="email"
-        placeholder="example@upi"
+        autoComplete="tel"
+        inputMode="numeric"
+        maxLength={10}
+        placeholder="10-digit mobile number"
         className="input"
-        value={upi}
-        onChange={(e) => setUpi(e.target.value)}
-        aria-invalid={upi.length > 0 && !upiValid}
+        value={phone}
+        onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
+        aria-invalid={phone.length > 0 && !phoneValid}
       />
-      {upi.length > 0 && !upiValid && (
+      {phone.length > 0 && !phoneValid && (
         <p className="mt-1 text-xs text-red-600">
-          Enter a valid UPI ID, like name@bank.
+          Enter a valid 10-digit mobile number.
         </p>
       )}
       <p className="mt-1 text-xs text-muted">
-        Any refund is sent to this UPI ID, so double-check it.
+        Any refund is sent to this number, so double-check it.
       </p>
 
       <label className="mt-5 flex items-start gap-3 text-xs leading-relaxed text-slate-700">

@@ -62,6 +62,9 @@ model UnbanRequest {
   // ip, user agent), replayed in the server-side conversion. Without them the
   // gateway's dead end would cost us the link back to the ad that paid for it.
   attribution      String?
+  // First time the customer opened the deposit step — the step's own countdown
+  // runs from here, so it can't be restarted by reloading.
+  depositSeenAt    DateTime?
   filedAt    DateTime?
 
   createdAt DateTime @default(now())
@@ -102,7 +105,9 @@ model Refund {
 
   amount   Int
   currency String @default("INR")
+  // Older refunds were collected as a UPI handle; newer ones as a phone number.
   upiId    String
+  phone    String?
 
   // NOT_REQUESTED -> PENDING -> PROCESSING -> COMPLETED | FAILED
   status    String  @default("NOT_REQUESTED")

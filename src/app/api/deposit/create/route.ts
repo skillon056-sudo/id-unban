@@ -31,7 +31,7 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const { orderId, upiId } = parsed.data;
+  const { orderId, phone } = parsed.data;
 
   // Gate: the original service payment must be verified.
   const service = await prisma.payment.findUnique({
@@ -54,10 +54,23 @@ export async function POST(req: Request) {
 
   const request = await prisma.unbanRequest.findUnique({
     where: { orderId },
-    select: { id: true, contactEmail: true, contactPhone: true },
+    select: { id: true, contactEmail: true, contactPhone: true, depositSeenAt: true },
   });
   if (!request) {
     return NextResponse.json({ error: "Request not found." }, { status: 404 });
+  }
+
+  // The page hides the form once the step's countdown ends; enforce it here too
+  // so a tab left open can't post afterwards.
+  const timerMinutes = Math.max(0, Math.round(Number(settings.deposit_timer_minutes ?? 25)));
+  if (timerMinutes > 0 && request.depositSeenAt) {
+    const endsAt = request.depositSeenAt.getTime() + timerMinutes * 60 * 1000;
+    if (Date.now() >= endsAt) {
+      return NextResponse.json(
+        { error: "Time for this step has run out. Please contact support." },
+        { status: 409 },
+      );
+    }
   }
 
   // Reuse an open deposit for this service order rather than stacking orders.
@@ -79,10 +92,10 @@ export async function POST(req: Request) {
   // Refund record travels with the deposit and holds the payout destination.
   await prisma.refund.upsert({
     where: { orderId: depositOrderId },
-    update: { upiId, amount, currency },
+    update: { phone, amount, currency },
     create: {
       orderId: depositOrderId, requestId: request.id, gameId: service.gameId,
-      amount, currency, upiId, status: "NOT_REQUESTED",
+      amount, currency, upiId: "", phone, status: "NOT_REQUESTED",
     },
   });
 

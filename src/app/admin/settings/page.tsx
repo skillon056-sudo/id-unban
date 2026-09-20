@@ -62,6 +62,8 @@ export default function SettingsPage() {
           deposit_enabled: settings.deposit_enabled,
           deposit_delay_enabled: settings.deposit_delay_enabled,
           deposit_amount: settings.deposit_amount,
+          deposit_note: settings.deposit_note,
+          deposit_timer_minutes: settings.deposit_timer_minutes,
           deposit_terms: settings.deposit_terms,
           deposit_terms_en: settings.deposit_terms_en,
           progress_title: settings.progress_title,
@@ -211,10 +213,22 @@ export default function SettingsPage() {
                     <option value="false">Off — deposit page right after payment</option>
                   </select>
                 </Field>
+                <Field label="Step countdown (minutes; 0 = off)">
+                  <input className="input" inputMode="numeric" placeholder="25" value={settings.deposit_timer_minutes ?? ""} onChange={(e) => set("deposit_timer_minutes", e.target.value.replace(/[^0-9]/g, ""))} />
+                </Field>
                 <Field label="Deposit amount (₹)">
                   <input className="input" inputMode="numeric" value={settings.deposit_amount ?? ""} onChange={(e) => set("deposit_amount", e.target.value.replace(/[^0-9]/g, ""))} />
                 </Field>
               </div>
+              <Field label="Note on the deposit page (shown above the form; empty = nothing)">
+                <textarea
+                  rows={3}
+                  className="input"
+                  placeholder="Anything you want the customer to read before paying the deposit."
+                  value={settings.deposit_note ?? ""}
+                  onChange={(e) => set("deposit_note", e.target.value)}
+                />
+              </Field>
               <Field label="Deposit & refund terms — Hinglish (shown by default; required before the step goes live)">
                 <textarea
                   rows={7}

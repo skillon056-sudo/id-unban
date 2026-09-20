@@ -48,9 +48,16 @@ export const upiIdSchema = z
   .toLowerCase()
   .regex(/^[a-z0-9._-]{2,64}@[a-z]{2,32}$/, "Enter a valid UPI ID, like name@bank.");
 
+// Indian mobile, with or without the country code; stored as 10 digits.
+export const phoneSchema = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/[^0-9]/g, "").replace(/^0+/, "").replace(/^91(?=\d{10}$)/, ""))
+  .refine((v) => /^[6-9]\d{9}$/.test(v), "Enter a valid 10-digit mobile number.");
+
 export const depositIntakeSchema = z.object({
   orderId: z.string().trim().min(6).max(40),
-  upiId: upiIdSchema,
+  phone: phoneSchema,
 });
 
 export const refundUpdateSchema = z.object({
@@ -93,6 +100,8 @@ export const settingsSchema = z.object({
   site_logo: z.string().trim().max(500).optional(),
   footer_note: z.string().trim().max(600).optional(),
   hero_subtitle: z.string().trim().max(400).optional(),
+  deposit_note: z.string().trim().max(600).optional(),
+  deposit_timer_minutes: z.string().regex(/^\d{1,3}$/).optional(),
   videos_heading: z.string().trim().max(60).optional(),
   video_1_url: z.string().trim().max(200).optional(),
   video_1_title: z.string().trim().max(150).optional(),
