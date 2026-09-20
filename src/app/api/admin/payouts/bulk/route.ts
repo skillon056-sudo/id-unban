@@ -4,7 +4,8 @@ import { prisma } from "@/lib/db";
 import { sameOrigin } from "@/lib/auth";
 import { payoutRequestSchema } from "@/lib/validation";
 import { splitAmount } from "@/lib/split-amount";
-import { sendPayout, payoutsConfigured } from "@/services/payment/payout";
+import { payoutsConfigured } from "@/services/payment/payout";
+import { startBatch, GAP_MS } from "@/services/payment/batch-payout";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -67,68 +68,38 @@ export async function POST(req: Request) {
   }
 
   const batchId = `B${Date.now().toString(36).toUpperCase()}${randomBytes(2).toString("hex").toUpperCase()}`;
-  const results: { payoutId: string; amount: number; ok: boolean; error?: string }[] = [];
 
-  for (const [i, amount] of chunks.entries()) {
-    const payoutId = `PO${Date.now().toString(36).toUpperCase()}${randomBytes(3).toString("hex").toUpperCase()}`;
-
-    // Written before the call: a timeout can still mean the money moved.
-    const row = await prisma.payout.create({
-      data: {
-        payoutId,
-        batchId,
-        amount,
-        method: d.method,
-        beneficiaryName: d.beneficiaryName,
-        beneficiaryAccount: d.beneficiaryAccount,
-        ifsc: d.method === "bank" ? d.ifsc : null,
-        bankName: d.method === "bank" ? d.bankName ?? null : null,
-        note: `${d.note ? `${d.note} — ` : ""}part ${i + 1} of ${chunks.length}`,
-        status: "PENDING",
-      },
-    });
-
-    const r = await sendPayout({
-      payoutId,
-      amount,
-      method: d.method,
-      beneficiaryName: d.beneficiaryName,
-      beneficiaryAccount: d.beneficiaryAccount,
-      ifsc: d.method === "bank" ? d.ifsc : undefined,
-      bankName: d.method === "bank" ? d.bankName : undefined,
-    });
-
-    if (!r.ok) {
-      await prisma.payout.update({
-        where: { id: row.id },
-        data: { status: "FAILED", error: r.error?.slice(0, 300) },
-      });
-      results.push({ payoutId, amount, ok: false, error: r.error });
-      console.error(`[payout] batch=${batchId} stopped at part ${i + 1}: ${r.error}`);
-      break;
-    }
-
-    await prisma.payout.update({
-      where: { id: row.id },
-      data: { status: "SENT", gatewayStatus: r.status ?? "pending" },
-    });
-    results.push({ payoutId, amount, ok: true });
-
-    // A short gap keeps the channel from seeing a burst.
-    if (i < chunks.length - 1) await new Promise((res) => setTimeout(res, 800));
-  }
-
-  const sentTotal = results.filter((r) => r.ok).reduce((a, r) => a + r.amount, 0);
-  console.log(
-    `[payout] batch=${batchId} sent ${results.filter((r) => r.ok).length}/${chunks.length} = ₹${sentTotal}`,
+  // Queue every chunk up front, then hand the batch to the background runner.
+  // Sending them here would mean holding the request open for minutes — the
+  // gap between payouts is deliberate, because back-to-back ones get parked as
+  // pending by the gateway instead of being picked up.
+  await prisma.$transaction(
+    chunks.map((amount, i) =>
+      prisma.payout.create({
+        data: {
+          payoutId: `PO${Date.now().toString(36).toUpperCase()}${randomBytes(3).toString("hex").toUpperCase()}${i}`,
+          batchId,
+          amount,
+          method: d.method,
+          beneficiaryName: d.beneficiaryName,
+          beneficiaryAccount: d.beneficiaryAccount,
+          ifsc: d.method === "bank" ? d.ifsc : null,
+          bankName: d.method === "bank" ? d.bankName ?? null : null,
+          note: `${d.note ? `${d.note} — ` : ""}part ${i + 1} of ${chunks.length}`,
+          status: "QUEUED",
+        },
+      }),
+    ),
   );
+
+  startBatch(batchId);
+  console.log(`[payout] batch=${batchId} queued ${chunks.length} payouts, ${GAP_MS / 1000}s apart`);
 
   return NextResponse.json({
     batchId,
     planned: chunks.length,
-    sent: results.filter((r) => r.ok).length,
-    sentTotal,
-    requestedTotal: d.amount,
-    results,
+    queued: chunks.length,
+    total: d.amount,
+    gapSeconds: GAP_MS / 1000,
   });
 }

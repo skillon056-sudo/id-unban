@@ -37,6 +37,18 @@ export default function WithdrawPage() {
 
   const [mode, setMode] = useState<"single" | "bulk">("single");
   const [plan, setPlan] = useState<number[] | null>(null);
+  const [batch, setBatch] = useState<{
+    batchId: string;
+    running: boolean;
+    gapSeconds: number;
+    total: number;
+    queued: number;
+    sent: number;
+    failed: number;
+    cancelled: number;
+    sentAmount: number;
+    plannedAmount: number;
+  } | null>(null);
   const [planning, setPlanning] = useState(false);
   const [method, setMethod] = useState<"upi" | "bank">("upi");
   const [name, setName] = useState("");
@@ -68,6 +80,22 @@ export default function WithdrawPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // A batch sends one payout every gapSeconds, so the page follows along
+  // instead of holding a request open for minutes.
+  useEffect(() => {
+    if (!batch || (batch.queued === 0 && !batch.running)) return;
+    const t = setTimeout(async () => {
+      try {
+        const b = await fetch(`/api/admin/payouts/batch/${batch.batchId}`).then((r) => r.json());
+        if (b?.batchId) setBatch(b);
+        if (b?.queued === 0) load();
+      } catch {
+        /* try again on the next tick */
+      }
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [batch, load]);
 
   const amountNum = Math.round(Number(amount || 0));
   const destinationOk =
@@ -199,14 +227,18 @@ This moves real money and cannot be undone.`,
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Bulk payout failed.");
-      if (body.sent < body.planned) {
-        const failed = body.results?.find((r: { ok: boolean }) => !r.ok);
-        setError(
-          `Sent ${body.sent} of ${body.planned} (₹${body.sentTotal.toLocaleString()} of ₹${body.requestedTotal.toLocaleString()}). Stopped because: ${failed?.error ?? "the gateway refused one"}`,
-        );
-      } else {
-        setSent(`${body.sent} payouts, batch ${body.batchId}`);
-      }
+      setBatch({
+        batchId: body.batchId,
+        running: true,
+        gapSeconds: body.gapSeconds,
+        total: body.planned,
+        queued: body.queued,
+        sent: 0,
+        failed: 0,
+        cancelled: 0,
+        sentAmount: 0,
+        plannedAmount: body.total,
+      });
       setPlan(null);
       setAmount("");
       load();
@@ -254,6 +286,76 @@ This moves real money and cannot be undone.`,
               &#8377;{bal.paidOut.toLocaleString()}
             </p>
             <p className="mt-1 text-xs text-muted">including payout fees</p>
+          </div>
+        </div>
+      )}
+
+      {batch && (
+        <div className="mt-5 rounded-xl border border-accent/60 bg-accent/10 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-ink">
+              {batch.queued > 0
+                ? `Sending ${batch.total} payouts, one every ${batch.gapSeconds}s`
+                : batch.failed > 0
+                  ? "Batch stopped"
+                  : "Batch finished"}
+            </p>
+            <span className="font-mono text-xs text-muted">{batch.batchId}</span>
+          </div>
+
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
+            <div
+              className="h-full bg-accent transition-all"
+              style={{ width: `${Math.round((batch.sent / Math.max(1, batch.total)) * 100)}%` }}
+            />
+          </div>
+
+          <p className="mt-2 text-xs text-muted">
+            Sent {batch.sent} of {batch.total} &nbsp;·&nbsp; &#8377;
+            {batch.sentAmount.toLocaleString()} of &#8377;{batch.plannedAmount.toLocaleString()}
+            {batch.queued > 0 && <> &nbsp;·&nbsp; {batch.queued} waiting</>}
+            {batch.failed > 0 && <> &nbsp;·&nbsp; {batch.failed} failed</>}
+            {batch.cancelled > 0 && <> &nbsp;·&nbsp; {batch.cancelled} cancelled</>}
+          </p>
+
+          <div className="mt-3 flex gap-2">
+            {batch.queued > 0 && (
+              <button
+                onClick={async () => {
+                  if (!confirm(`Stop this batch? ${batch.queued} payouts have not been sent yet.`)) return;
+                  await fetch(`/api/admin/payouts/batch/${batch.batchId}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "cancel" }),
+                  });
+                  const b = await fetch(`/api/admin/payouts/batch/${batch.batchId}`).then((r) => r.json());
+                  setBatch(b);
+                  load();
+                }}
+                className="btn-ghost text-sm"
+              >
+                Stop remaining
+              </button>
+            )}
+            {batch.queued > 0 && !batch.running && (
+              <button
+                onClick={async () => {
+                  await fetch(`/api/admin/payouts/batch/${batch.batchId}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "resume" }),
+                  });
+                }}
+                className="btn-primary text-sm"
+              >
+                Resume
+              </button>
+            )}
+            {batch.queued === 0 && (
+              <button onClick={() => setBatch(null)} className="btn-ghost text-sm">
+                Dismiss
+              </button>
+            )}
           </div>
         </div>
       )}
