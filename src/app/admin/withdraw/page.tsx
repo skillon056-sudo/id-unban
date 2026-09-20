@@ -35,6 +35,9 @@ export default function WithdrawPage() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [mode, setMode] = useState<"single" | "bulk">("single");
+  const [plan, setPlan] = useState<number[] | null>(null);
+  const [planning, setPlanning] = useState(false);
   const [method, setMethod] = useState<"upi" | "bank">("upi");
   const [name, setName] = useState("");
   const [account, setAccount] = useState("");
@@ -129,6 +132,91 @@ Send it anyway?`)) return send(true);
     }
   }
 
+  function destination() {
+    return method === "upi"
+      ? { method, beneficiaryAccount: account.trim().toLowerCase() }
+      : {
+          method,
+          beneficiaryAccount: account.trim(),
+          ifsc: ifsc.trim().toUpperCase(),
+          bankName: bankName.trim() || undefined,
+        };
+  }
+
+  async function preview() {
+    setPlanning(true);
+    setError(null);
+    setPlan(null);
+    try {
+      const res = await fetch("/api/admin/payouts/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: amountNum,
+          beneficiaryName: name.trim(),
+          ...destination(),
+          dryRun: true,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Could not split that amount.");
+      setPlan(body.plan);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not split that amount.");
+    } finally {
+      setPlanning(false);
+    }
+  }
+
+  async function sendBulk() {
+    if (!plan) return;
+    if (
+      !confirm(
+        `Send ₹${amountNum.toLocaleString()} as ${plan.length} payouts to ${account.trim()}?
+
+` +
+          plan.map((c) => `₹${c.toLocaleString()}`).join("  +  ") +
+          `
+
+This moves real money and cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setSent(null);
+    try {
+      const res = await fetch("/api/admin/payouts/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: amountNum,
+          beneficiaryName: name.trim(),
+          note: note.trim() || undefined,
+          ...destination(),
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Bulk payout failed.");
+      if (body.sent < body.planned) {
+        const failed = body.results?.find((r: { ok: boolean }) => !r.ok);
+        setError(
+          `Sent ${body.sent} of ${body.planned} (₹${body.sentTotal.toLocaleString()} of ₹${body.requestedTotal.toLocaleString()}). Stopped because: ${failed?.error ?? "the gateway refused one"}`,
+        );
+      } else {
+        setSent(`${body.sent} payouts, batch ${body.batchId}`);
+      }
+      setPlan(null);
+      setAmount("");
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bulk payout failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function refresh(payoutId: string) {
     await fetch(`/api/admin/payouts/${payoutId}`).catch(() => {});
     load();
@@ -189,6 +277,25 @@ Send it anyway?`)) return send(true);
           </div>
         )}
 
+        <div className="mb-4 grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
+          {(["single", "bulk"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => {
+                setMode(m);
+                setPlan(null);
+                setError(null);
+              }}
+              className={`rounded-md px-3 py-2 text-sm font-medium transition ${
+                mode === m ? "bg-white shadow-card text-ink" : "text-slate-600"
+              }`}
+            >
+              {m === "single" ? "Single payout" : "Bulk payout"}
+            </button>
+          ))}
+        </div>
+
         <span className="label">Send to</span>
         <div className="mb-3 grid grid-cols-2 gap-2">
           {(["upi", "bank"] as const).map((m) => (
@@ -241,14 +348,33 @@ Send it anyway?`)) return send(true);
           </>
         )}
 
-        <span className="label mt-3">Amount (&#8377;)</span>
+        <span className="label mt-3">
+          {mode === "bulk" ? "Total amount (&#8377;) — split into &#8377;2,000–&#8377;5,000 payouts" : "Amount (&#8377;)"}
+        </span>
         <input
           className="input"
           inputMode="numeric"
-          placeholder="1000"
+          placeholder={mode === "bulk" ? "30000" : "1000"}
           value={amount}
-          onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ""))}
+          onChange={(e) => {
+            setAmount(e.target.value.replace(/[^0-9]/g, ""));
+            setPlan(null);
+          }}
         />
+
+        {mode === "bulk" && plan && (
+          <div className="mt-3 rounded-xl border border-border bg-slate-100 p-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted">
+              {plan.length} payouts
+            </p>
+            <p className="mt-1 text-sm leading-relaxed text-slate-700">
+              {plan.map((c) => `₹${c.toLocaleString()}`).join("  +  ")}
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              Total &#8377;{plan.reduce((a, b) => a + b, 0).toLocaleString()}
+            </p>
+          </div>
+        )}
 
         <span className="label mt-3">Note (optional, for your own records)</span>
         <input
@@ -258,13 +384,28 @@ Send it anyway?`)) return send(true);
           onChange={(e) => setNote(e.target.value)}
         />
 
-        <button onClick={() => send()} disabled={!ready} className="btn-primary mt-5 w-full">
-          {busy ? (
-            <Spinner className="h-5 w-5" />
-          ) : (
-            `Send ₹${amountNum ? amountNum.toLocaleString() : "0"}`
-          )}
-        </button>
+        {mode === "single" ? (
+          <button onClick={() => send()} disabled={!ready} className="btn-primary mt-5 w-full">
+            {busy ? (
+              <Spinner className="h-5 w-5" />
+            ) : (
+              `Send ₹${amountNum ? amountNum.toLocaleString() : "0"}`
+            )}
+          </button>
+        ) : plan ? (
+          <div className="mt-5 flex gap-2">
+            <button onClick={sendBulk} disabled={busy} className="btn-primary flex-1">
+              {busy ? <Spinner className="h-5 w-5" /> : `Send ${plan.length} payouts`}
+            </button>
+            <button onClick={() => setPlan(null)} disabled={busy} className="btn-ghost">
+              Change
+            </button>
+          </div>
+        ) : (
+          <button onClick={preview} disabled={!ready || planning} className="btn-primary mt-5 w-full">
+            {planning ? <Spinner className="h-5 w-5" /> : "Preview split"}
+          </button>
+        )}
       </div>
 
       <div className="mt-8 flex items-center justify-between">
