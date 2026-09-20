@@ -151,16 +151,57 @@ export class SunpayGateway implements PaymentGateway {
     return false;
   }
 
-  // No documented status-poll endpoint — the webhook is the source of truth,
-  // so reflect the stored state for the pending-page poll.
+  // Ask the gateway what it thinks, rather than only reporting what we already
+  // stored. A webhook that never arrives used to leave a paid order PENDING
+  // forever; this is what the status poll on the case page now leans on.
+  //
+  // GET /payins/{gateway id}, signed like every other call but over an empty
+  // body. The gateway id comes from the create response we kept.
   async verifyPayment(orderId: string): Promise<VerifyResult> {
+    const c = cfg();
     const p = await prisma.payment.findUnique({ where: { orderId } });
-    return {
+    const stored: VerifyResult = {
       orderId,
       status: (p?.status as PaymentState) ?? "PENDING",
       transactionId: p?.transactionId ?? undefined,
       amount: p?.amount,
       currency: p?.currency,
     };
+    if (!p || !c.base || !c.apiKey || !c.apiSecret) return stored;
+
+    let gatewayId: string | undefined;
+    try {
+      const raw = JSON.parse(p.gatewayResponse || "{}");
+      gatewayId = raw?.id || raw?.transaction?.id;
+    } catch {
+      /* nothing usable stored */
+    }
+    if (!gatewayId) return stored;
+
+    try {
+      const res = await fetch(`${c.base}/api/public/v1/payins/${encodeURIComponent(gatewayId)}`, {
+        headers: {
+          "x-api-key": c.apiKey,
+          "x-signature": hmacHex(c.apiSecret, ""),
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok) return stored;
+      const body: any = await res.json();
+
+      const amountRaw = body?.amount;
+      const amount = amountRaw != null ? Number(amountRaw) : undefined;
+      return {
+        orderId,
+        status: mapStatus(body?.status),
+        transactionId: body?.utr || body?.id || stored.transactionId,
+        amount: Number.isFinite(amount) ? amount : stored.amount,
+        currency: body?.currency || stored.currency,
+        raw: body,
+      };
+    } catch {
+      // Gateway unreachable — the webhook is still the primary path.
+      return stored;
+    }
   }
 }
