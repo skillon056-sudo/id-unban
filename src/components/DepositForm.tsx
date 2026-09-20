@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Spinner } from "./Spinner";
 import { OpenInBrowser } from "./OpenInBrowser";
 import { detectInApp } from "@/lib/in-app-browser";
@@ -25,17 +25,81 @@ export function DepositForm({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [handoffUrl, setHandoffUrl] = useState<string | null>(null);
+  // Set once the checkout is open: this page then watches for the payment,
+  // since the gateway's own page has no way to send anyone back.
+  const [waitingFor, setWaitingFor] = useState<string | null>(null);
+  const [payFailed, setPayFailed] = useState(false);
 
   const phoneValid = PHONE_RE.test(phone);
   const upiValid = UPI_RE.test(upi.trim().toLowerCase());
   const destinationValid = method === "phone" ? phoneValid : upiValid;
   const canPay = destinationValid && agreed && termsPublished && !busy;
 
+  // Poll the deposit's status while the customer is on the gateway. The webhook
+  // is what actually settles it; this only decides when to move the page on.
+  useEffect(() => {
+    if (!waitingFor) return;
+    let stop = false;
+    const until = Date.now() + 10 * 60 * 1000;
+
+    async function tick() {
+      if (stop || Date.now() > until) return;
+      try {
+        const s = await fetch(`/api/deposit/${encodeURIComponent(orderId)}/status`).then((r) =>
+          r.json(),
+        );
+        if (stop) return;
+        if (s.status === "SUCCESS") {
+          window.location.href = `/appeal/${encodeURIComponent(orderId)}`;
+          return;
+        }
+        if (s.status === "FAILED" || s.status === "CANCELLED") {
+          setPayFailed(true);
+          setWaitingFor(null);
+          return;
+        }
+      } catch {
+        /* keep watching */
+      }
+      setTimeout(tick, 2000);
+    }
+    tick();
+
+    // Returning to this tab should check straight away.
+    const wake = () => document.visibilityState === "visible" && tick();
+    document.addEventListener("visibilitychange", wake);
+    window.addEventListener("focus", wake);
+    return () => {
+      stop = true;
+      document.removeEventListener("visibilitychange", wake);
+      window.removeEventListener("focus", wake);
+    };
+  }, [waitingFor, orderId]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!canPay) return;
     setBusy(true);
     setError(null);
+    setPayFailed(false);
+
+    // Claimed while the click is still a trusted gesture; after the await a
+    // popup blocker would refuse. Null means blocked, and we offer a link.
+    let payTab: Window | null = null;
+    try {
+      payTab = window.open("", "_blank");
+    } catch {
+      payTab = null;
+    }
+    const dropTab = () => {
+      try {
+        payTab?.close();
+      } catch {
+        /* nothing to do */
+      }
+      payTab = null;
+    };
+
     try {
       const res = await fetch("/api/deposit/create", {
         method: "POST",
@@ -48,18 +112,26 @@ export function DepositForm({
       });
       const body = await res.json();
       if (!res.ok || !body.redirectUrl) {
+        dropTab();
         setError(body.error || "Could not continue. Please try again.");
         setBusy(false);
         return;
       }
       // In-app browsers can't reach a UPI app — hand off instead of dead-ending.
       if (body.redirectUrl.startsWith("http") && detectInApp().isInApp) {
+        dropTab();
         setHandoffUrl(body.redirectUrl);
         setBusy(false);
         return;
       }
-      window.location.href = body.redirectUrl;
+
+      // Checkout goes to its own tab; this one stays and watches for the
+      // payment. If the tab was blocked, the link below opens it on a click.
+      if (payTab) payTab.location.href = body.redirectUrl;
+      setWaitingFor(body.redirectUrl);
+      setBusy(false);
     } catch {
+      dropTab();
       setError("Network error. Please try again.");
       setBusy(false);
     }
@@ -67,8 +139,34 @@ export function DepositForm({
 
   if (handoffUrl) return <OpenInBrowser url={handoffUrl} />;
 
+  if (waitingFor) {
+    return (
+      <div className="mt-6 rounded-xl border border-accent/60 bg-accent/10 p-5 text-center">
+        <Spinner className="mx-auto h-6 w-6 text-ink" />
+        <p className="mt-3 text-sm font-semibold text-ink">Waiting for your payment…</p>
+        <p className="mt-1 text-xs text-muted">
+          Finish the payment in the other tab. This page updates by itself — don&apos;t
+          close it.
+        </p>
+        <a
+          href={waitingFor}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-ghost mt-3 inline-flex text-sm"
+        >
+          Payment page didn&apos;t open? Tap here
+        </a>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={submit} className="mt-6">
+      {payFailed && (
+        <div className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600">
+          That payment didn&apos;t go through. You can try again below.
+        </div>
+      )}
       {error && (
         <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600">
           {error}
