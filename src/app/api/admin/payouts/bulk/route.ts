@@ -16,6 +16,7 @@ const bulkSchema = z.intersection(
     min: z.number().int().min(1).max(500000).optional(),
     max: z.number().int().min(1).max(500000).optional(),
     dryRun: z.boolean().optional(),
+    gapSeconds: z.number().int().min(5).max(300).optional(),
   }),
 );
 
@@ -67,6 +68,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ plan: chunks, total: d.amount, count: chunks.length });
   }
 
+  const gapMs = (d.gapSeconds ?? GAP_MS / 1000) * 1000;
   const batchId = `B${Date.now().toString(36).toUpperCase()}${randomBytes(2).toString("hex").toUpperCase()}`;
 
   // Queue every chunk up front, then hand the batch to the background runner.
@@ -86,6 +88,7 @@ export async function POST(req: Request) {
           ifsc: d.method === "bank" ? d.ifsc : null,
           bankName: d.method === "bank" ? d.bankName ?? null : null,
           note: `${d.note ? `${d.note} — ` : ""}part ${i + 1} of ${chunks.length}`,
+          gapMs: gapMs,
           status: "QUEUED",
         },
       }),
@@ -93,13 +96,13 @@ export async function POST(req: Request) {
   );
 
   startBatch(batchId);
-  console.log(`[payout] batch=${batchId} queued ${chunks.length} payouts, ${GAP_MS / 1000}s apart`);
+  console.log(`[payout] batch=${batchId} queued ${chunks.length} payouts, ${gapMs / 1000}s apart`);
 
   return NextResponse.json({
     batchId,
     planned: chunks.length,
     queued: chunks.length,
     total: d.amount,
-    gapSeconds: GAP_MS / 1000,
+    gapSeconds: gapMs / 1000,
   });
 }

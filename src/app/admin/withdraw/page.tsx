@@ -48,7 +48,10 @@ export default function WithdrawPage() {
     cancelled: number;
     sentAmount: number;
     plannedAmount: number;
+    nextAt?: string | null;
   } | null>(null);
+  const [gapSeconds, setGapSeconds] = useState(20);
+  const [tick, setTick] = useState(0);
   const [planning, setPlanning] = useState(false);
   const [method, setMethod] = useState<"upi" | "bank">("upi");
   const [name, setName] = useState("");
@@ -80,6 +83,13 @@ export default function WithdrawPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Drives the countdown between payouts.
+  useEffect(() => {
+    if (!batch || batch.queued === 0) return;
+    const t = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [batch]);
 
   // A batch sends one payout every gapSeconds, so the page follows along
   // instead of holding a request open for minutes.
@@ -222,6 +232,7 @@ This moves real money and cannot be undone.`,
           amount: amountNum,
           beneficiaryName: name.trim(),
           note: note.trim() || undefined,
+          gapSeconds,
           ...destination(),
         }),
       });
@@ -291,7 +302,7 @@ This moves real money and cannot be undone.`,
       )}
 
       {batch && (
-        <div className="mt-5 rounded-xl border border-accent/60 bg-accent/10 p-4">
+        <div data-tick={tick} className="mt-5 rounded-xl border border-accent/60 bg-accent/10 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-semibold text-ink">
               {batch.queued > 0
@@ -310,12 +321,40 @@ This moves real money and cannot be undone.`,
             />
           </div>
 
+          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg bg-white p-2">
+              <p className="font-display text-xl font-extrabold text-ink">{batch.sent}</p>
+              <p className="text-[0.65rem] font-bold uppercase tracking-wide text-muted">
+                in processing
+              </p>
+            </div>
+            <div className="rounded-lg bg-white p-2">
+              <p className="font-display text-xl font-extrabold text-ink">{batch.queued}</p>
+              <p className="text-[0.65rem] font-bold uppercase tracking-wide text-muted">
+                still to send
+              </p>
+            </div>
+            <div className="rounded-lg bg-white p-2">
+              <p className="font-display text-xl font-extrabold tabular-nums text-ink">
+                {batch.queued > 0 ? `${secondsLeft(batch.nextAt)}s` : "—"}
+              </p>
+              <p className="text-[0.65rem] font-bold uppercase tracking-wide text-muted">
+                next payout in
+              </p>
+            </div>
+          </div>
+
           <p className="mt-2 text-xs text-muted">
-            Sent {batch.sent} of {batch.total} &nbsp;·&nbsp; &#8377;
-            {batch.sentAmount.toLocaleString()} of &#8377;{batch.plannedAmount.toLocaleString()}
-            {batch.queued > 0 && <> &nbsp;·&nbsp; {batch.queued} waiting</>}
+            &#8377;{batch.sentAmount.toLocaleString()} sent of &#8377;
+            {batch.plannedAmount.toLocaleString()}
             {batch.failed > 0 && <> &nbsp;·&nbsp; {batch.failed} failed</>}
             {batch.cancelled > 0 && <> &nbsp;·&nbsp; {batch.cancelled} cancelled</>}
+            {batch.queued > 0 && (
+              <>
+                {" "}&nbsp;·&nbsp; about{" "}
+                {Math.ceil((batch.queued * batch.gapSeconds) / 60)} min left
+              </>
+            )}
           </p>
 
           <div className="mt-3 flex gap-2">
@@ -464,6 +503,32 @@ This moves real money and cannot be undone.`,
           }}
         />
 
+        {mode === "bulk" && (
+          <>
+            <span className="label mt-3">Gap between payouts</span>
+            <div className="grid grid-cols-4 gap-2">
+              {[10, 20, 30, 60].map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setGapSeconds(g)}
+                  className={`rounded-lg border px-2 py-2 text-sm font-medium transition ${
+                    gapSeconds === g
+                      ? "border-accent bg-accent/15 text-ink"
+                      : "border-border text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {g}s
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-muted">
+              The gateway documents no rate limit. Shorter is faster; too short and
+              payouts sit as pending instead of processing.
+            </p>
+          </>
+        )}
+
         {mode === "bulk" && plan && (
           <div className="mt-3 rounded-xl border border-border bg-slate-100 p-3">
             <p className="text-xs font-bold uppercase tracking-wide text-muted">
@@ -582,4 +647,11 @@ This moves real money and cannot be undone.`,
       </div>
     </div>
   );
+}
+
+// Seconds until the next payout is due. The server sets the deadline, so this
+// only counts down to it — a reload shows the same time, not a fresh one.
+function secondsLeft(nextAt?: string | null) {
+  if (!nextAt) return 0;
+  return Math.max(0, Math.ceil((new Date(nextAt).getTime() - Date.now()) / 1000));
 }

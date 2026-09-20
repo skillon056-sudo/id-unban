@@ -13,17 +13,35 @@ export async function GET(
   const rows = await prisma.payout.findMany({
     where: { batchId: params.batchId },
     orderBy: { createdAt: "asc" },
-    select: { payoutId: true, amount: true, status: true, gatewayStatus: true, error: true },
+    select: {
+      payoutId: true,
+      amount: true,
+      status: true,
+      gatewayStatus: true,
+      error: true,
+      gapMs: true,
+      updatedAt: true,
+    },
   });
   if (rows.length === 0) return NextResponse.json({ error: "Batch not found." }, { status: 404 });
 
   const count = (s: string) => rows.filter((r) => r.status === s).length;
   const sent = rows.filter((r) => r.status === "SENT" || r.status === "COMPLETED");
 
+  // When the next queued payout is due: the last one's send time plus the gap.
+  const gapMs = rows[0]?.gapMs ?? GAP_MS;
+  const lastSentAt = sent.reduce<Date | null>(
+    (latest, r) => (!latest || r.updatedAt > latest ? r.updatedAt : latest),
+    null,
+  );
+  const nextAt =
+    count("QUEUED") > 0 && lastSentAt ? new Date(lastSentAt.getTime() + gapMs) : null;
+
   return NextResponse.json({
     batchId: params.batchId,
     running: isRunning(params.batchId),
-    gapSeconds: GAP_MS / 1000,
+    gapSeconds: gapMs / 1000,
+    nextAt: nextAt?.toISOString() ?? null,
     total: rows.length,
     queued: count("QUEUED"),
     sent: sent.length,

@@ -69,7 +69,7 @@ export async function runBatch(batchId: string): Promise<void> {
 
       const more = await prisma.payout.count({ where: { batchId, status: "QUEUED" } });
       if (more === 0) break;
-      await new Promise((res) => setTimeout(res, GAP_MS));
+      await new Promise((res) => setTimeout(res, next.gapMs ?? GAP_MS));
     }
   } finally {
     running.delete(batchId);

@@ -168,6 +168,10 @@ model Payout {
   source String @default("admin")
   // Set when this payout is one slice of a larger withdrawal.
   batchId String?
+  // Seconds to wait before the next payout of the same batch. Chosen per batch
+  // because the gateway documents no rate limit — the right gap is whatever
+  // gets payouts picked up instead of parked as pending.
+  gapMs   Int?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
