@@ -9,10 +9,10 @@
 //   • spread across the range rather than clustered.
 //
 // Those rules cap how much can go out at once: with a ₹200 gap between values
-// in ₹2,000–₹5,000, there are only sixteen usable amounts, so a batch can hold
-// at most sixteen payouts. Past that the amount genuinely cannot be split under
-// these rules, and the caller is told rather than handed a batch that breaks
-// them quietly.
+// in ₹200–₹5,000 there are only twenty-five usable amounts, so a batch can hold
+// at most that many payouts. Past that the amount genuinely cannot be split
+// under these rules, and the caller is told rather than handed a batch that
+// breaks them quietly.
 
 export interface SplitOptions {
   min?: number;
@@ -24,7 +24,7 @@ export interface SplitOptions {
 }
 
 export function splitAmount(total: number, opts: SplitOptions = {}): number[] {
-  const min = opts.min ?? 2000;
+  const min = opts.min ?? 200;
   const max = opts.max ?? 5000;
   const gap = opts.gap ?? 200;
   const rand = opts.random ?? Math.random;

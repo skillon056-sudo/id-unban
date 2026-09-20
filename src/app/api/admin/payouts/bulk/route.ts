@@ -19,6 +19,7 @@ const bulkSchema = z.intersection(
 );
 
 // Sends one withdrawal as several smaller payouts to the same destination.
+// Chunks run from ₹200 up to ₹5,000, all different and at least ₹200 apart.
 //
 // dryRun returns the plan without moving anything, so the operator sees exactly
 // what will go out before confirming. The real run sends them one at a time and
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
     );
   }
   const d = parsed.data;
-  const min = d.min ?? 2000;
+  const min = d.min ?? 200;
   const max = d.max ?? 5000;
   if (max < min) {
     return NextResponse.json({ error: "Smallest must not exceed largest." }, { status: 400 });

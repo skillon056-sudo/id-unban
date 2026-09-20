@@ -349,7 +349,7 @@ This moves real money and cannot be undone.`,
         )}
 
         <span className="label mt-3">
-          {mode === "bulk" ? "Total amount (&#8377;) — split into &#8377;2,000–&#8377;5,000 payouts" : "Amount (&#8377;)"}
+          {mode === "bulk" ? "Total amount (&#8377;) — split into &#8377;200–&#8377;5,000 payouts, all different" : "Amount (&#8377;)"}
         </span>
         <input
           className="input"
