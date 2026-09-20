@@ -29,6 +29,8 @@ export interface CreateOrderResult {
 // Normalized result of a webhook or a server-side verification poll.
 export interface VerifyResult {
   orderId: string;
+  /** Set when the callback is about money going OUT, not a pay-in. */
+  payout?: { payoutId: string; status: string; utr?: string };
   status: PaymentState;
   transactionId?: string;
   amount?: number;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getGateway } from "@/services/payment";
 import { settlePayment } from "@/services/payment/settle";
+import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,24 @@ export async function POST(req: Request) {
       `status=${verified.status} amount=${verified.amount ?? "-"} ` +
       `${verified.currency ?? ""} txn=${verified.transactionId ?? "-"}`,
   );
+
+  // Money we sent out: mark the refund, never touch a payment.
+  if (verified.payout) {
+    const { payoutId, status, utr } = verified.payout;
+    const done = /success|complete|paid|settle/i.test(status);
+    const failed = /fail|reject|declin|cancel/i.test(status);
+    const r = await prisma.refund.updateMany({
+      where: { payoutId },
+      data: {
+        payoutStatus: status,
+        ...(utr ? { reference: utr } : {}),
+        ...(done ? { status: "COMPLETED", refundedAt: new Date() } : {}),
+        ...(failed ? { status: "FAILED" } : {}),
+      },
+    });
+    console.log(`[webhook] payout=${payoutId} status=${status} matched=${r.count}`);
+    return NextResponse.json({ ok: true, payout: payoutId, matched: r.count });
+  }
 
   const outcome = await settlePayment(verified);
 

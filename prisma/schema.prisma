@@ -114,6 +114,13 @@ model Refund {
   reference String? // payout/UTR reference once actually sent
   notes     String?
 
+  // Set when the payout is sent through the gateway rather than by hand.
+  payoutId      String?  @unique // our id, also the gateway's idempotency key
+  payoutStatus  String?  // gateway's own status: pending/processing/success/failed
+  payoutMethod  String?  // upi | bank
+  payoutAccount String?  // VPA or account number the money was sent to
+  payoutSentAt  DateTime?
+
   requestedAt DateTime?
   refundedAt  DateTime?
   createdAt   DateTime  @default(now())

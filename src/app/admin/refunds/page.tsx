@@ -17,6 +17,8 @@ interface Row {
   currency: string;
   upiId: string;
   phone: string | null;
+  payoutId: string | null;
+  payoutStatus: string | null;
   status: string;
   reference: string | null;
   notes: string | null;
@@ -206,6 +208,9 @@ function RefundDrawer({
         </div>
 
         {row.depositStatus !== "SUCCESS" && <MarkPaid orderId={row.orderId} onDone={onSaved} />}
+        {row.depositStatus === "SUCCESS" && row.status !== "COMPLETED" && (
+          <SendPayout row={row} onDone={onSaved} />
+        )}
 
         <div className="mt-4">
           <label className="label" htmlFor="r-status">Refund status</label>
@@ -337,6 +342,141 @@ function MarkPaid({ orderId, onDone }: { orderId: string; onDone: () => void }) 
       <div className="mt-3 flex gap-2">
         <button onClick={submit} disabled={busy || reference.trim().length < 6} className="btn-primary flex-1 text-sm">
           {busy ? <Spinner className="h-4 w-4" /> : "Record as paid"}
+        </button>
+        <button onClick={() => setOpen(false)} disabled={busy} className="btn-ghost text-sm">
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Balance() {
+  const [state, setState] = useState<{ configured: boolean; balance?: number; error?: string; unsupported?: boolean } | null>(null);
+  useEffect(() => {
+    fetch("/api/admin/balance").then((r) => r.json()).then(setState).catch(() => {});
+  }, []);
+  if (!state || state.unsupported) return null; // gateway exposes no balance
+  if (!state.configured) {
+    return (
+      <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+        Payouts aren&apos;t configured yet — add the gateway&apos;s payout API key and secret to
+        send refunds from here. Until then, send them by hand and mark them completed.
+      </div>
+    );
+  }
+  return (
+    <div className="mb-4 rounded-xl border border-border bg-slate-100 p-3 text-sm">
+      Gateway balance:{" "}
+      <span className="font-display font-bold text-ink">
+        {state.balance != null ? `₹${state.balance.toLocaleString()}` : "—"}
+      </span>
+      {state.error && <span className="ml-2 text-xs text-red-600">{state.error}</span>}
+    </div>
+  );
+}
+
+// Sends the deposit back through the gateway. The amount comes from the refund
+// record on the server; nothing here can change it.
+function SendPayout({ row, onDone }: { row: Row; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [method, setMethod] = useState<"upi" | "bank">("upi");
+  const [name, setName] = useState("");
+  const [account, setAccount] = useState(row.phone ? "" : row.upiId || "");
+  const [ifsc, setIfsc] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function send() {
+    if (!confirm(`Send ₹${row.amount} to ${account}? This moves real money.`)) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/refunds/${row.orderId}/payout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          method === "upi"
+            ? { method, beneficiaryName: name, beneficiaryAccount: account }
+            : { method, beneficiaryName: name, beneficiaryAccount: account, ifsc, bankName },
+        ),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || "Payout failed.");
+      onDone();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Payout failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (row.payoutId) {
+    return (
+      <div className="mt-4 rounded-xl border border-border bg-slate-100 p-3 text-xs">
+        Payout sent · <span className="font-mono">{row.payoutId}</span> · gateway says{" "}
+        <span className="font-semibold">{row.payoutStatus ?? "pending"}</span>
+        <button
+          onClick={async () => {
+            await fetch(`/api/admin/refunds/${row.orderId}/payout`).catch(() => {});
+            onDone();
+          }}
+          className="ml-2 text-accent underline"
+        >
+          Refresh
+        </button>
+      </div>
+    );
+  }
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="btn-primary mt-4 w-full text-sm">
+        Send ₹{row.amount} refund via gateway
+      </button>
+    );
+  }
+
+  const ready = name.trim().length > 1 && account.trim().length > 2 && (method === "upi" || ifsc.trim().length === 11);
+
+  return (
+    <div className="mt-4 rounded-xl border border-border p-4">
+      <p className="text-sm font-semibold">Send ₹{row.amount} refund</p>
+      <p className="mt-1 text-xs text-muted">
+        Customer gave: <span className="font-mono">{row.phone || row.upiId || "—"}</span>
+      </p>
+      {error && <p className="mt-2 text-xs font-medium text-red-700">{error}</p>}
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {(["upi", "bank"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => setMethod(m)}
+            className={`rounded-lg border px-3 py-2 text-sm ${method === m ? "border-accent bg-accent/15" : "border-border"}`}
+          >
+            {m === "upi" ? "UPI" : "Bank"}
+          </button>
+        ))}
+      </div>
+
+      <input className="input mt-2" placeholder="Beneficiary name" value={name} onChange={(e) => setName(e.target.value)} />
+      <input
+        className="input mt-2"
+        placeholder={method === "upi" ? "name@bank" : "Account number"}
+        value={account}
+        onChange={(e) => setAccount(e.target.value)}
+      />
+      {method === "bank" && (
+        <>
+          <input className="input mt-2" placeholder="IFSC" value={ifsc} onChange={(e) => setIfsc(e.target.value.toUpperCase())} />
+          <input className="input mt-2" placeholder="Bank name (optional)" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+        </>
+      )}
+
+      <div className="mt-3 flex gap-2">
+        <button onClick={send} disabled={busy || !ready} className="btn-primary flex-1 text-sm">
+          {busy ? <Spinner className="h-4 w-4" /> : "Send payout"}
         </button>
         <button onClick={() => setOpen(false)} disabled={busy} className="btn-ghost text-sm">
           Cancel

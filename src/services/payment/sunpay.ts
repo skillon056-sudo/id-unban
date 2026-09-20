@@ -115,6 +115,22 @@ export class SunpayGateway implements PaymentGateway {
     const data = raw?.data || raw || {};
     const txn = raw?.transaction || {};
 
+    // Payout callbacks carry payout_id and no order_id — they are about money
+    // we sent out, not a payment coming in.
+    const payoutId = raw.payout_id || data.payout_id;
+    if (payoutId && !(raw.order_id || data.order_id || txn.order_id)) {
+      return {
+        orderId: "",
+        status: mapStatus(raw.status ?? data.status),
+        payout: {
+          payoutId: String(payoutId),
+          status: String(raw.status ?? data.status ?? ""),
+          utr: raw.utr || data.utr || undefined,
+        },
+        raw,
+      };
+    }
+
     const orderId = raw.order_id || data.order_id || txn.order_id;
     // Signature already checked, so this is a real gateway message we can't
     // place — keep its body so the shape can be read and handled.
