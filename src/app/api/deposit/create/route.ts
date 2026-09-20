@@ -31,7 +31,7 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  const { orderId, phone } = parsed.data;
+  const { orderId, phone, upiId } = parsed.data;
 
   // Gate: the original service payment must be verified.
   const service = await prisma.payment.findUnique({
@@ -92,10 +92,10 @@ export async function POST(req: Request) {
   // Refund record travels with the deposit and holds the payout destination.
   await prisma.refund.upsert({
     where: { orderId: depositOrderId },
-    update: { phone, amount, currency },
+    update: { phone: phone ?? null, upiId: upiId ?? "", amount, currency },
     create: {
       orderId: depositOrderId, requestId: request.id, gameId: service.gameId,
-      amount, currency, upiId: "", phone, status: "NOT_REQUESTED",
+      amount, currency, upiId: upiId ?? "", phone: phone ?? null, status: "NOT_REQUESTED",
     },
   });
 

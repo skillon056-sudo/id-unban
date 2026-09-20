@@ -55,10 +55,17 @@ export const phoneSchema = z
   .transform((v) => v.replace(/[^0-9]/g, "").replace(/^0+/, "").replace(/^91(?=\d{10}$)/, ""))
   .refine((v) => /^[6-9]\d{9}$/.test(v), "Enter a valid 10-digit mobile number.");
 
-export const depositIntakeSchema = z.object({
-  orderId: z.string().trim().min(6).max(40),
-  phone: phoneSchema,
-});
+// The customer picks how they want the refund back, so exactly one of the two
+// must arrive — never both, or we wouldn't know where to send it.
+export const depositIntakeSchema = z
+  .object({
+    orderId: z.string().trim().min(6).max(40),
+    phone: phoneSchema.optional(),
+    upiId: upiIdSchema.optional(),
+  })
+  .refine((d) => Boolean(d.phone) !== Boolean(d.upiId), {
+    message: "Enter either a phone number or a UPI ID.",
+  });
 
 export const refundUpdateSchema = z.object({
   status: z.enum(["NOT_REQUESTED", "PENDING", "PROCESSING", "COMPLETED", "FAILED"]).optional(),
