@@ -15,6 +15,8 @@ export interface CreateOrderInput {
   // checkout has no way to send them back to us.
   customerEmail?: string | null;
   customerPhone?: string | null;
+  /** Where the gateway should send the browser after checkout, if it honours it. */
+  returnUrl?: string;
 }
 
 export interface CreateOrderResult {

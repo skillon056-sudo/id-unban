@@ -59,15 +59,17 @@ export class SunpayGateway implements PaymentGateway {
       throw new Error(`Amount below Sunpay minimum (₹${c.minAmount}).`);
     }
 
-    // Fields per Sunpay's pay-in reference. There is deliberately no return
-    // URL here: the API accepts none, so the checkout is a dead end and the
-    // webhook is the only way we learn about a payment.
+    // Fields per the gateway's pay-in reference. redirect_url sits right after
+    // notify_url, where their support said to put it — nothing we send is
+    // echoed back by their read API, so whether it is honoured can only be seen
+    // on a real payment. The page keeps polling either way.
     const body: Record<string, unknown> = {
       order_id: input.orderId, // must be A-Z0-9, no hyphens (see generateOrderId)
       amount: input.amount, // major units (₹)
       currency: c.currency,
       method: c.method,
       notify_url: `${c.baseUrl}/api/payment/webhook`,
+      ...(input.returnUrl ? { redirect_url: input.returnUrl } : {}),
       ...(input.customerEmail ? { customer_email: input.customerEmail } : {}),
       ...(input.customerPhone ? { customer_phone: input.customerPhone } : {}),
       // Echoed back on every webhook — handy when reconciling by hand.

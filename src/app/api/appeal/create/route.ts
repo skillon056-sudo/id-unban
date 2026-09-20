@@ -126,6 +126,7 @@ export async function POST(req: Request) {
       currency,
       customerEmail: contactEmail,
       customerPhone: contactPhone || null,
+      returnUrl: `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/appeal/${orderId}`,
     })
     .then((r) => ({ ok: true as const, ...r }))
     .catch((err) => ({ ok: false as const, err }));
