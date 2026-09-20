@@ -63,6 +63,7 @@ export default function SettingsPage() {
           deposit_delay_enabled: settings.deposit_delay_enabled,
           deposit_amount: settings.deposit_amount,
           deposit_note: settings.deposit_note,
+          deposit_expired_note: settings.deposit_expired_note,
           deposit_timer_minutes: settings.deposit_timer_minutes,
           deposit_terms: settings.deposit_terms,
           deposit_terms_en: settings.deposit_terms_en,
@@ -227,6 +228,15 @@ export default function SettingsPage() {
                   placeholder="Anything you want the customer to read before paying the deposit."
                   value={settings.deposit_note ?? ""}
                   onChange={(e) => set("deposit_note", e.target.value)}
+                />
+              </Field>
+              <Field label="Note when the countdown has run out (under the “I want to pay now” button)">
+                <textarea
+                  rows={3}
+                  className="input"
+                  placeholder="Shown only after the step's timer ends."
+                  value={settings.deposit_expired_note ?? ""}
+                  onChange={(e) => set("deposit_expired_note", e.target.value)}
                 />
               </Field>
               <Field label="Deposit & refund terms — Hinglish (shown by default; required before the step goes live)">

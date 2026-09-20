@@ -109,6 +109,7 @@ export const settingsSchema = z.object({
   hero_subtitle: z.string().trim().max(400).optional(),
   deposit_note: z.string().trim().max(600).optional(),
   deposit_voice_url: z.string().trim().max(500).optional(),
+  deposit_expired_note: z.string().trim().max(600).optional(),
   deposit_timer_minutes: z.string().regex(/^\d{1,3}$/).optional(),
   videos_heading: z.string().trim().max(60).optional(),
   video_1_url: z.string().trim().max(200).optional(),

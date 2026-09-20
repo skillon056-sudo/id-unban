@@ -8,6 +8,7 @@ import { AccountQuestions } from "@/components/AccountQuestions";
 import { TermsBlock } from "@/components/TermsBlock";
 import { depositOpensAt } from "@/lib/deposit";
 import { DepositCountdown } from "@/components/DepositCountdown";
+import { DepositReopen } from "@/components/DepositReopen";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,7 @@ export default async function DepositPage({
   const support = settings.support_contact || "";
   const note = settings.deposit_note || "";
   const voice = settings.deposit_voice_url || "";
+  const expiredNote = settings.deposit_expired_note || "";
 
   // Countdown for this step. Starts the first time the customer opens the page
   // — not when the payment cleared — so it is genuinely the time they had.
@@ -132,15 +134,22 @@ export default async function DepositPage({
               )}
 
               {expired ? (
-                <div className="mt-5 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
-                  <p className="font-semibold">Time for this step has run out.</p>
-                  <p className="mt-1 text-xs leading-relaxed">
-                    Nothing has been charged. Contact
-                    {support ? ` ${support}` : " support"} with your reference{" "}
-                    <span className="font-mono font-semibold">{orderId}</span> and we&apos;ll
-                    reopen it for you.
-                  </p>
-                </div>
+                <>
+                  <div className="mt-5 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+                    <p className="font-semibold">Time for this step has run out.</p>
+                    <p className="mt-1 text-xs leading-relaxed">
+                      Nothing has been charged. You can start it again below, or contact
+                      {support ? ` ${support}` : " support"} with your reference{" "}
+                      <span className="font-mono font-semibold">{orderId}</span>.
+                    </p>
+                    <DepositReopen orderId={orderId} />
+                  </div>
+                  {expiredNote && (
+                    <p className="mt-4 whitespace-pre-line rounded-xl border border-border bg-white p-4 text-sm leading-relaxed text-slate-700">
+                      {expiredNote}
+                    </p>
+                  )}
+                </>
               ) : (
                 <>
                   {deadline && <DepositCountdown deadline={deadline.toISOString()} />}
