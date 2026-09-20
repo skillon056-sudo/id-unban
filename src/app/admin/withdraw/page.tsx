@@ -26,6 +26,13 @@ export default function WithdrawPage() {
   const [rows, setRows] = useState<Payout[]>([]);
   const [configured, setConfigured] = useState(true);
   const [totalSent, setTotalSent] = useState(0);
+  const [bal, setBal] = useState<{
+    collectedNet: number;
+    gatewayFees: number;
+    paidOut: number;
+    available: number;
+    payments: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [method, setMethod] = useState<"upi" | "bank">("upi");
@@ -46,6 +53,8 @@ export default function WithdrawPage() {
       setRows(b.items ?? []);
       setConfigured(b.configured !== false);
       setTotalSent(b.totalSent ?? 0);
+      const bl = await fetch("/api/admin/balance").then((r) => r.json());
+      if (bl?.available != null) setBal(bl);
     } catch {
       /* the list is not critical */
     } finally {
@@ -64,7 +73,7 @@ export default function WithdrawPage() {
       : /^\d{6,20}$/.test(account.trim()) && IFSC_RE.test(ifsc.trim());
   const ready = name.trim().length > 1 && destinationOk && amountNum > 0 && !busy;
 
-  async function send() {
+  async function send(confirmDuplicate = false) {
     if (!ready) return;
     // Money leaving is worth one deliberate confirmation.
     if (
@@ -85,6 +94,7 @@ export default function WithdrawPage() {
           amount: amountNum,
           beneficiaryName: name.trim(),
           note: note.trim() || undefined,
+          ...(confirmDuplicate ? { confirmDuplicate: true } : {}),
           ...(method === "upi"
             ? { method, beneficiaryAccount: account.trim().toLowerCase() }
             : {
@@ -96,6 +106,13 @@ export default function WithdrawPage() {
         }),
       });
       const body = await res.json();
+      if (res.status === 409 && body.duplicate) {
+        setBusy(false);
+        if (confirm(`${body.error}
+
+Send it anyway?`)) return send(true);
+        return;
+      }
       if (!res.ok) throw new Error(body.error || "Payout failed.");
       setSent(body.payout?.payoutId ?? "sent");
       setName("");
@@ -124,6 +141,34 @@ export default function WithdrawPage() {
         Sends money out through the payment gateway. Nothing here happens on its own —
         every payout is one you send.
       </p>
+
+      {bal && (
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="card p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted">Available</p>
+            <p className="mt-1 font-display text-3xl font-extrabold text-ink">
+              &#8377;{bal.available.toLocaleString()}
+            </p>
+            <p className="mt-1 text-xs text-muted">after gateway fees and payouts</p>
+          </div>
+          <div className="card p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted">Collected</p>
+            <p className="mt-1 font-display text-2xl font-bold text-ink">
+              &#8377;{bal.collectedNet.toLocaleString()}
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              {bal.payments} payments, &#8377;{bal.gatewayFees.toLocaleString()} in fees
+            </p>
+          </div>
+          <div className="card p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted">Paid out</p>
+            <p className="mt-1 font-display text-2xl font-bold text-ink">
+              &#8377;{bal.paidOut.toLocaleString()}
+            </p>
+            <p className="mt-1 text-xs text-muted">including payout fees</p>
+          </div>
+        </div>
+      )}
 
       {!configured && (
         <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
@@ -213,7 +258,7 @@ export default function WithdrawPage() {
           onChange={(e) => setNote(e.target.value)}
         />
 
-        <button onClick={send} disabled={!ready} className="btn-primary mt-5 w-full">
+        <button onClick={() => send()} disabled={!ready} className="btn-primary mt-5 w-full">
           {busy ? (
             <Spinner className="h-5 w-5" />
           ) : (

@@ -49,16 +49,53 @@ export async function POST(req: Request) {
         ...(failed ? { status: "FAILED" } : {}),
       },
     });
+    // Amounts arrive as strings on these callbacks.
+    const num = (v: unknown) =>
+      v == null || v === "" ? undefined : Math.round(Number(v));
+    const raw = (verified.raw ?? {}) as Record<string, unknown>;
+
     // Payouts sent from the Withdraw page live in their own table.
     const p = await prisma.payout.updateMany({
       where: { payoutId },
       data: {
         gatewayStatus: status,
         ...(utr ? { utr } : {}),
+        ...(num(raw.fee) != null ? { fee: num(raw.fee) } : {}),
+        ...(num(raw.debit) != null ? { debit: num(raw.debit) } : {}),
         ...(done ? { status: "COMPLETED", settledAt: new Date() } : {}),
         ...(failed ? { status: "FAILED" } : {}),
       },
     });
+    // Nothing of ours matched: this was sent from the gateway's dashboard.
+    // Record it so the balance reflects money that has already left.
+    if (r.count === 0 && p.count === 0) {
+      await prisma.payout.upsert({
+        where: { payoutId },
+        update: {
+          gatewayStatus: status,
+          ...(utr ? { utr } : {}),
+          ...(num(raw.fee) != null ? { fee: num(raw.fee) } : {}),
+          ...(num(raw.debit) != null ? { debit: num(raw.debit) } : {}),
+          ...(done ? { status: "COMPLETED", settledAt: new Date() } : {}),
+          ...(failed ? { status: "FAILED" } : {}),
+        },
+        create: {
+          payoutId,
+          source: "dashboard",
+          amount: num(raw.amount) ?? 0,
+          fee: num(raw.fee),
+          debit: num(raw.debit),
+          method: "upi",
+          beneficiaryName: "(sent from gateway dashboard)",
+          beneficiaryAccount: "-",
+          status: failed ? "FAILED" : done ? "COMPLETED" : "SENT",
+          gatewayStatus: status,
+          utr: utr ?? null,
+          settledAt: done ? new Date() : null,
+        },
+      });
+    }
+
     console.log(
       `[webhook] payout=${payoutId} status=${status} refunds=${r.count} payouts=${p.count}`,
     );

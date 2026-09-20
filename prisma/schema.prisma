@@ -159,6 +159,14 @@ model Payout {
   utr           String?
   error         String?
 
+  // Charged by the gateway on top of the amount; debit is what actually left
+  // the balance. Both arrive on the payout callbacks.
+  fee   Int?
+  debit Int?
+  // "admin" = sent from this panel, "dashboard" = sent from the gateway's own
+  // panel and learned about from its callback.
+  source String @default("admin")
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   settledAt DateTime?

@@ -39,6 +39,30 @@ export async function POST(req: Request) {
     );
   }
   const d = parsed.data;
+
+  // A payout that is still "processing" invites a second send. Each submission
+  // carries its own reference, so the gateway's idempotency can't catch that —
+  // this can. Sending the same amount to the same destination again needs the
+  // caller to say it is deliberate.
+  const recent = await prisma.payout.findFirst({
+    where: {
+      beneficiaryAccount: d.beneficiaryAccount,
+      amount: d.amount,
+      status: { in: ["PENDING", "SENT", "COMPLETED"] },
+      createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  if (recent && (body as { confirmDuplicate?: boolean })?.confirmDuplicate !== true) {
+    return NextResponse.json(
+      {
+        error: `₹${d.amount} was already sent to this destination at ${recent.createdAt.toISOString().slice(11, 16)} UTC (${recent.gatewayStatus ?? recent.status}). Send it again only if you mean to.`,
+        duplicate: true,
+      },
+      { status: 409 },
+    );
+  }
+
   const payoutId = `PO${Date.now().toString(36).toUpperCase()}${randomBytes(3).toString("hex").toUpperCase()}`;
 
   const row = await prisma.payout.create({
