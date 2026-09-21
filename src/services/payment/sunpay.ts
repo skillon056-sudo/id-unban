@@ -78,16 +78,30 @@ export class SunpayGateway implements PaymentGateway {
 
     // Sign the EXACT bytes we send — serialize once, sign that string, send it.
     const payload = JSON.stringify(body);
-    const res = await fetch(`${c.base}${c.payinPath}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": c.apiKey,
-        "x-signature": hmacHex(c.apiSecret, payload),
-      },
-      body: payload,
-      signal: AbortSignal.timeout(15000),
-    });
+    const post = () =>
+      fetch(`${c.base}${c.payinPath}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": c.apiKey,
+          "x-signature": hmacHex(c.apiSecret, payload),
+        },
+        body: payload,
+        signal: AbortSignal.timeout(15000),
+      });
+
+    // The gateway times out or throws a 5xx every so often — a handful a day —
+    // and the customer just sees "could not start payment". One retry costs a
+    // second and is safe: order_id is the gateway's idempotency key, so a
+    // request that did land returns the same transaction rather than a second.
+    let res: Response;
+    try {
+      res = await post();
+      if (res.status >= 500) throw new Error(`gateway ${res.status}`);
+    } catch {
+      await new Promise((r) => setTimeout(r, 700));
+      res = await post();
+    }
 
     const raw: any = await res.json().catch(() => ({}));
     const data = raw?.data || raw || {};
@@ -121,7 +135,9 @@ export class SunpayGateway implements PaymentGateway {
     // ours, and fall back to theirs for payouts started from their dashboard.
     const ourPayoutId = raw.merchant_payout_id || data.merchant_payout_id;
     const theirPayoutId = raw.payout_id || data.payout_id;
-    if ((ourPayoutId || theirPayoutId) && !(raw.order_id || data.order_id || txn.order_id)) {
+    const anyOrderId =
+      raw.order_id || data.order_id || txn.order_id || raw.merchant_order_id || data.merchant_order_id;
+    if ((ourPayoutId || theirPayoutId) && !anyOrderId) {
       return {
         orderId: "",
         status: mapStatus(raw.status ?? data.status),
@@ -136,7 +152,11 @@ export class SunpayGateway implements PaymentGateway {
       };
     }
 
-    const orderId = raw.order_id || data.order_id || txn.order_id;
+    // payin.failed carries only merchant_order_id — no order_id at all — so a
+    // failed payment used to be rejected and left sitting as PENDING while the
+    // gateway retried the callback for hours.
+    const orderId =
+      raw.order_id || data.order_id || txn.order_id || raw.merchant_order_id || data.merchant_order_id;
     // Signature already checked, so this is a real gateway message we can't
     // place — keep its body so the shape can be read and handled.
     if (!orderId) throw new Error(`Webhook missing order_id raw=${rawBody.slice(0, 1500)}`);
