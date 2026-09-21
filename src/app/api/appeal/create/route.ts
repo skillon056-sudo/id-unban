@@ -9,18 +9,6 @@ import { readCookie } from "@/lib/cookies";
 
 export const dynamic = "force-dynamic";
 
-// How long an unpaid case may be handed the checkout it already has.
-//
-// Sunpay ties one checkout to one order_id: re-creating with the same id
-// returns {"idempotent": true} and the ORIGINAL transaction. That checkout
-// expires after about five minutes, so a window anywhere near it hands the
-// customer back a dead payment page — which is exactly what happened to anyone
-// who took a minute to get through the in-app-browser hand-off and clicked pay
-// again in Chrome.
-//
-// Must stay well under the gateway's expiry. Reuse only exists to swallow
-// double-clicks; a minute is plenty for that.
-const REUSE_MS = 60 * 1000;
 
 // Opens a paid appeal-assistance case and returns the checkout URL.
 //
@@ -65,24 +53,7 @@ export async function POST(req: Request) {
     ua: req.headers.get("user-agent"),
   });
 
-  // ── 1. One parallel read ────────────────────────────────────────────
-  const [settings, open] = await Promise.all([
-    getSettings(),
-    // Reuse an unpaid case only for the SAME person retrying within a short
-    // window. Keying on gameId alone let two people searching the same Free
-    // Fire ID share one order — the second got the first person's checkout
-    // link and overwrote their contact email.
-    prisma.unbanRequest.findFirst({
-      where: {
-        gameId,
-        contactEmail,
-        status: "PENDING",
-        createdAt: { gte: new Date(Date.now() - REUSE_MS) },
-      },
-      orderBy: { createdAt: "desc" },
-      select: { orderId: true },
-    }),
-  ]);
+  const settings = await getSettings();
 
   // Already paid once with this email? Don't sell them the same thing twice —
   // send them back to whatever step they actually left unfinished.
@@ -99,7 +70,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "This service is not available right now." }, { status: 503 });
   }
 
-  const orderId = open?.orderId ?? generateOrderId();
+  // Always a fresh order. An unpaid one is never handed back: the gateway ties
+  // a checkout to its order id and returns the original — expired by then — so
+  // a second attempt would open a dead payment page.
+  const orderId = generateOrderId();
   const caseData = {
     contactEmail,
     contactPhone: contactPhone || null,
@@ -111,10 +85,8 @@ export async function POST(req: Request) {
 
   // ── Free mode: no gateway, single write, straight to the case page ──
   if (isFree) {
-    await prisma.unbanRequest.upsert({
-      where: { orderId },
-      update: { ...caseData, status: "IN_PROGRESS" },
-      create: { ...caseData, orderId, gameId, status: "IN_PROGRESS" },
+    await prisma.unbanRequest.create({
+      data: { ...caseData, orderId, gameId, status: "IN_PROGRESS" },
     });
     return NextResponse.json({ orderId, redirectUrl: `/appeal/${orderId}` });
   }
@@ -137,16 +109,12 @@ export async function POST(req: Request) {
     .catch((err) => ({ ok: false as const, err }));
 
   const writes = prisma.$transaction([
-    prisma.unbanRequest.upsert({
-      where: { orderId },
-      update: caseData,
-      create: { ...caseData, orderId, gameId, status: "PENDING" },
+    prisma.unbanRequest.create({
+      data: { ...caseData, orderId, gameId, status: "PENDING" },
     }),
     // Optimistically PENDING: if the gateway call fails we correct it below.
-    prisma.payment.upsert({
-      where: { orderId },
-      update: { amount: fee, currency, status: "PENDING" },
-      create: { orderId, gameId, amount: fee, currency, status: "PENDING" },
+    prisma.payment.create({
+      data: { orderId, gameId, amount: fee, currency, status: "PENDING" },
     }),
   ]);
 

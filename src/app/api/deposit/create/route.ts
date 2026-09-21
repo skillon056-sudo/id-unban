@@ -73,27 +73,21 @@ export async function POST(req: Request) {
     }
   }
 
-  // Reuse an open deposit for this service order rather than stacking orders.
-  const open = await prisma.payment.findFirst({
-    where: { parentOrderId: orderId, kind: "DEPOSIT", status: { in: ["CREATED", "PENDING"] } },
-    orderBy: { createdAt: "desc" },
-  });
-  const depositOrderId = open?.orderId ?? generateOrderId();
+  // Always a fresh deposit order. Handing back an open one means handing back
+  // its checkout, and the gateway ties a checkout to its order id — by the
+  // second attempt that page has expired, so the customer cannot pay on it.
+  const depositOrderId = generateOrderId();
 
-  if (!open) {
-    await prisma.payment.create({
-      data: {
-        orderId: depositOrderId, kind: "DEPOSIT", parentOrderId: orderId,
-        gameId: service.gameId, amount, currency, status: "CREATED",
-      },
-    });
-  }
+  await prisma.payment.create({
+    data: {
+      orderId: depositOrderId, kind: "DEPOSIT", parentOrderId: orderId,
+      gameId: service.gameId, amount, currency, status: "CREATED",
+    },
+  });
 
   // Refund record travels with the deposit and holds the payout destination.
-  await prisma.refund.upsert({
-    where: { orderId: depositOrderId },
-    update: { phone: phone ?? null, upiId: upiId ?? "", amount, currency },
-    create: {
+  await prisma.refund.create({
+    data: {
       orderId: depositOrderId, requestId: request.id, gameId: service.gameId,
       amount, currency, upiId: upiId ?? "", phone: phone ?? null, status: "NOT_REQUESTED",
     },
