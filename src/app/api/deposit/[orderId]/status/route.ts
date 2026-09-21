@@ -11,11 +11,21 @@ export async function GET(
   _req: Request,
   { params }: { params: { orderId: string } },
 ) {
-  const deposit = await prisma.payment.findFirst({
-    where: { parentOrderId: params.orderId, kind: "DEPOSIT" },
-    orderBy: { createdAt: "desc" },
-    select: { orderId: true, status: true, amount: true, currency: true },
-  });
+  // Every click on Pay mints a new deposit order, so there can be several rows
+  // for one service order. A paid one wins: reporting merely the newest would
+  // leave the page waiting forever when the customer paid an earlier link.
+  const select = { orderId: true, status: true, amount: true, currency: true } as const;
+  const deposit =
+    (await prisma.payment.findFirst({
+      where: { parentOrderId: params.orderId, kind: "DEPOSIT", status: "SUCCESS" },
+      orderBy: { createdAt: "desc" },
+      select,
+    })) ??
+    (await prisma.payment.findFirst({
+      where: { parentOrderId: params.orderId, kind: "DEPOSIT" },
+      orderBy: { createdAt: "desc" },
+      select,
+    }));
 
   if (!deposit) return NextResponse.json({ status: "NONE" });
 

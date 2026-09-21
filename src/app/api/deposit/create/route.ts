@@ -102,7 +102,7 @@ export async function POST(req: Request) {
       customerEmail: request.contactEmail,
       customerPhone: request.contactPhone,
       // Back to the case page for the service order this deposit belongs to.
-      returnUrl: `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/appeal/${orderId}?from=gw`,
+      returnUrl: `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/r/${orderId}`,
     });
     await prisma.payment.update({
       where: { orderId: depositOrderId },

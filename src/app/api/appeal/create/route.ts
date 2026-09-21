@@ -102,8 +102,9 @@ export async function POST(req: Request) {
       currency,
       customerEmail: contactEmail,
       customerPhone: contactPhone || null,
-      // ?from=gw marks a browser the gateway sent back, so returns can be counted.
-      returnUrl: `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/appeal/${orderId}?from=gw`,
+      // /r/… is the return path: no query string, because the gateway stops
+      // redirecting when one is present.
+      returnUrl: `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/r/${orderId}`,
     })
     .then((r) => ({ ok: true as const, ...r }))
     .catch((err) => ({ ok: false as const, err }));

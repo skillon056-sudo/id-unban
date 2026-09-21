@@ -30,7 +30,10 @@ interface Row {
 }
 
 export default function RefundsPage() {
-  const [status, setStatus] = useState<(typeof filters)[number]>("ALL");
+  // PENDING by default: every click on Pay now opens its own deposit order, so
+  // ALL is mostly attempts that were never paid. The other filters still show
+  // them.
+  const [status, setStatus] = useState<(typeof filters)[number]>("PENDING");
   const [search, setSearch] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
