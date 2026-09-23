@@ -6,21 +6,25 @@ import { prisma } from "@/lib/db";
 
 let instance: PaymentGateway | null = null;
 
-// Sunpay first; if it can't open a checkout (e.g. "UPI not fetched"), the same
-// order goes to Rupayex instead. Webhooks stay Sunpay's — Rupayex calls back
-// on /r/{orderId}.
+// Sunpay first; if it can't open a checkout, the same order goes to Rupayex
+// instead. PAYIN_FIRST="rupayex" flips the order — for when Sunpay hands out
+// checkouts that never load UPI, which its API gives no sign of. Webhooks stay
+// Sunpay's either way (orders already out there still settle); Rupayex calls
+// back on /r/{orderId}.
 function withFallback(primary: PaymentGateway, backup: RupayexGateway): PaymentGateway {
   return {
     name: primary.name,
     async createOrder(input) {
+      const [first, second] =
+        process.env.PAYIN_FIRST === "rupayex" ? [backup, primary] : [primary, backup];
       try {
-        return await primary.createOrder(input);
+        return await first.createOrder(input);
       } catch (err) {
         console.error(
-          `[payment] ${primary.name} failed order=${input.orderId}, switching to rupayex:`,
+          `[payment] ${first.name} failed order=${input.orderId}, switching to ${second.name}:`,
           err instanceof Error ? err.message : err,
         );
-        return backup.createOrder(input);
+        return second.createOrder(input);
       }
     },
     handleWebhook: (req) => primary.handleWebhook(req),
