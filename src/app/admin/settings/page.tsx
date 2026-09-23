@@ -74,6 +74,7 @@ export default function SettingsPage() {
           service_fee: settings.service_fee,
           service_fee_before: settings.service_fee_before,
           service_free: settings.service_free,
+          payin_gateway: settings.payin_gateway,
         }),
       });
       const body = await res.json();
@@ -339,6 +340,16 @@ export default function SettingsPage() {
                   >
                     <option value="false">No — charge the fee above</option>
                     <option value="true">Yes — show Free to everyone</option>
+                  </select>
+                </Field>
+                <Field label="Payment gateway (if it fails, the other one is used)">
+                  <select
+                    className="input"
+                    value={settings.payin_gateway ?? "sunpay"}
+                    onChange={(e) => set("payin_gateway", e.target.value)}
+                  >
+                    <option value="sunpay">Sunpay</option>
+                    <option value="rupayex">Rupayex</option>
                   </select>
                 </Field>
               </div>

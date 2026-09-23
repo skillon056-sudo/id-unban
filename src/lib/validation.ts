@@ -123,6 +123,7 @@ export const settingsSchema = z.object({
   video_3_duration: z.string().trim().max(10).optional(),
   cta_label: z.string().trim().max(40).optional(),
   service_free: z.enum(["true", "false"]).optional(),
+  payin_gateway: z.enum(["sunpay", "rupayex"]).optional(),
   service_fee: z.string().regex(/^\d+(\.\d+)?$/).optional(),
   service_fee_before: z.string().regex(/^\d*(\.\d+)?$/).optional(),
   default_price_usd: z.string().regex(/^\d+(\.\d+)?$/).optional(),

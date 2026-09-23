@@ -3,20 +3,21 @@ import { MockGateway } from "./mock";
 import { SunpayGateway } from "./sunpay";
 import { RupayexGateway, rupayexConfigured } from "./rupayex";
 import { prisma } from "@/lib/db";
+import { getSetting } from "@/lib/settings";
 
 let instance: PaymentGateway | null = null;
 
 // Sunpay first; if it can't open a checkout, the same order goes to Rupayex
-// instead. PAYIN_FIRST="rupayex" flips the order — for when Sunpay hands out
-// checkouts that never load UPI, which its API gives no sign of. Webhooks stay
-// Sunpay's either way (orders already out there still settle); Rupayex calls
-// back on /r/{orderId}.
+// instead. The admin's "Payment gateway" setting (or PAYIN_FIRST) flips the
+// order — for when Sunpay hands out checkouts that never load UPI, which its
+// API gives no sign of. Webhooks stay Sunpay's either way (orders already out
+// there still settle); Rupayex calls back on /r/{orderId}.
 function withFallback(primary: PaymentGateway, backup: RupayexGateway): PaymentGateway {
   return {
     name: primary.name,
     async createOrder(input) {
-      const [first, second] =
-        process.env.PAYIN_FIRST === "rupayex" ? [backup, primary] : [primary, backup];
+      const choice = (await getSetting("payin_gateway")) || process.env.PAYIN_FIRST;
+      const [first, second] = choice === "rupayex" ? [backup, primary] : [primary, backup];
       try {
         return await first.createOrder(input);
       } catch (err) {
