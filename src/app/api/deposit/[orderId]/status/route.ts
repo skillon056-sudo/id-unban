@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getGateway } from "@/services/payment";
+import { settlePayment } from "@/services/payment/settle";
 
 export const dynamic = "force-dynamic";
 
-// Read-only status of the deposit belonging to a service order. It never
-// credits anything — only the signed webhook settles a payment. This exists so
+// Status of the deposit belonging to a service order. It never credits on its
+// own say — a pending one is re-asked of the gateway, like the case page does,
+// because Rupayex has no signed webhook. This exists so
 // the page the customer left open can tell when the deposit has gone through,
 // because the gateway's checkout has no way to send them back.
 export async function GET(
@@ -28,6 +31,15 @@ export async function GET(
     }));
 
   if (!deposit) return NextResponse.json({ status: "NONE" });
+
+  if (deposit.status === "PENDING") {
+    try {
+      const v = await getGateway().verifyPayment(deposit.orderId);
+      if (v.status !== "PENDING") deposit.status = (await settlePayment(v)).status;
+    } catch {
+      /* keep showing PENDING */
+    }
+  }
 
   return NextResponse.json({
     status: deposit.status, // PENDING | SUCCESS | FAILED | CANCELLED
