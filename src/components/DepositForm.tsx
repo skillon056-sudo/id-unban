@@ -29,6 +29,7 @@ export function DepositForm({
   // since the gateway's own page has no way to send anyone back.
   const [waitingFor, setWaitingFor] = useState<string | null>(null);
   const [payFailed, setPayFailed] = useState(false);
+  const [paid, setPaid] = useState(false);
   // The checkout tab we opened, so it can be closed once the payment lands.
   const payTabRef = useRef<Window | null>(null);
 
@@ -67,7 +68,8 @@ export function DepositForm({
         if (stop) return;
         if (s.status === "SUCCESS") {
           closePayTab();
-          window.location.href = `/appeal/${encodeURIComponent(orderId)}`;
+          setPaid(true);
+          setWaitingFor(null);
           return;
         }
         if (s.status === "FAILED" || s.status === "CANCELLED") {
@@ -159,6 +161,18 @@ export function DepositForm({
   }
 
   if (handoffUrl) return <OpenInBrowser url={handoffUrl} />;
+
+  if (paid) {
+    return (
+      <div className="mt-6 rounded-xl border border-emerald-500/50 bg-emerald-50 p-5 text-center">
+        <p className="text-sm font-semibold text-ink">Payment successful</p>
+        <p className="mt-1 text-xs text-muted">Your deposit has been confirmed.</p>
+        <a href={`/appeal/${encodeURIComponent(orderId)}`} className="btn-primary mt-3 w-full">
+          Continue
+        </a>
+      </div>
+    );
+  }
 
   if (waitingFor) {
     return (

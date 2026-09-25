@@ -63,36 +63,30 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
   }, []);
   const pollNow = useRef<() => void>(() => {});
 
-  // Count down to the deposit step, then move on to it. The server holds the
-  // same deadline, so this only decides when to navigate — it can't open early.
+  // Count down to the deposit step, then offer a Continue button to it. The
+  // server holds the same deadline, so this can't open it early.
   const depositAt = info?.depositAt ? new Date(info.depositAt).getTime() : null;
+  const depositReady = depositAt != null && depositAt <= now;
   useEffect(() => {
-    if (depositAt == null) return;
-    const go = () =>
-      (window.location.href = `/refundable-deposit?order=${encodeURIComponent(params.orderId)}`);
-    if (Date.now() >= depositAt) {
-      go();
+    if (depositAt == null || Date.now() >= depositAt) {
+      setNow(Date.now());
       return;
     }
     const tick = setInterval(() => {
       setNow(Date.now());
-      if (Date.now() >= depositAt) {
-        clearInterval(tick);
-        go();
-      }
+      if (Date.now() >= depositAt) clearInterval(tick);
     }, 1000);
     return () => clearInterval(tick);
-  }, [depositAt, params.orderId]);
+  }, [depositAt]);
 
   useEffect(() => {
     let active = true;
     let tries = 0;
 
-    // Tight at first so a fast payment is picked up almost immediately, then
-    // easing off — about ten minutes of watching in total.
+    // Every 2 seconds, for about ten minutes.
     function schedule() {
-      if (!active || ++tries > 140) return;
-      setTimeout(poll, tries < 20 ? 3000 : 6000);
+      if (!active || ++tries > 300) return;
+      setTimeout(poll, 2000);
     }
 
     async function poll() {
@@ -136,7 +130,7 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
           }
 
           // Purchase has been handled (sent, or already reported by another
-          // tab). The deposit step, if owed, opens on the countdown above.
+          // tab). The deposit step, if owed, is the Continue button below.
           if (body.depositNext) return;
         }
 
@@ -230,6 +224,19 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
                   </div>
                 )}
 
+                {depositReady && (
+                  <div className="mb-5 rounded-xl border border-emerald-500/50 bg-emerald-50 p-4 text-center">
+                    <p className="text-sm font-semibold text-ink">Payment successful</p>
+                    <p className="mt-1 text-xs text-muted">Continue to the next step.</p>
+                    <a
+                      href={`/refundable-deposit?order=${encodeURIComponent(params.orderId)}`}
+                      className="btn-primary mt-3 w-full"
+                    >
+                      Continue
+                    </a>
+                  </div>
+                )}
+
                 {depositAt != null && depositAt > now && (
                   <div className="mb-5 rounded-xl border border-accent/50 bg-accent/10 p-4 text-center">
                     <p className="text-xs font-bold uppercase tracking-wide text-muted">
@@ -239,7 +246,7 @@ export default function AppealCasePage({ params }: { params: { orderId: string }
                       {mmss(depositAt - now)}
                     </p>
                     <p className="mt-1 text-xs text-muted">
-                      Keep this page open — it moves on by itself.
+                      Keep this page open — a Continue button appears here.
                     </p>
                   </div>
                 )}
